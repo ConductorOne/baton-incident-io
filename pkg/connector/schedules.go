@@ -138,10 +138,14 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 
 			onCallUsers[shift.User.ID] = true
 
-			grant := createGrant(scheduleRes, client.User{
+			grant, err := createGrant(scheduleRes, client.User{
 				ID:    shift.User.ID,
 				Email: shift.User.Email,
 			}, "On Call")
+			if err != nil {
+				o.logger.Error("Error creating grant", zap.Error(err))
+				continue
+			}
 
 			if grant != nil {
 				grants = append(grants, grant)
@@ -164,12 +168,15 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 					}
 
 					seenUsers[user.ID] = true
-					o.logger.Info("Assigning Member", zap.String("user_id", user.ID), zap.String("schedule_id", schedule.ID))
 
-					grant := createGrant(scheduleRes, client.User{
+					grant, err := createGrant(scheduleRes, client.User{
 						ID:    user.ID,
 						Email: user.Email,
 					}, "Member")
+					if err != nil {
+						o.logger.Error("Error creating grant", zap.Error(err))
+						continue
+					}
 
 					if grant != nil {
 						grants = append(grants, grant)
@@ -193,22 +200,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 }
 
 // createGrant generates a grant for a user with the specified role.
-func createGrant(scheduleResource *v2.Resource, user client.User, role string) *v2.Grant {
-
-	grantID := fmt.Sprintf("grant:%s:%s:%s", scheduleResource.Id.Resource, user.ID, role)
-
-	userResource, err := resource.NewUserResource(
-		user.Email,
-		userResourceType,
-		user.ID,
-		[]resource.UserTraitOption{
-			resource.WithEmail(user.Email, true),
-		},
-	)
-	if err != nil {
-		return nil
-	}
-
+func createGrant(scheduleResource *v2.Resource, user client.User, role string) (*v2.Grant, error) {
 	roleResource := &v2.Resource{
 		Id: &v2.ResourceId{
 			ResourceType: scheduleResourceType.Id,
@@ -216,12 +208,16 @@ func createGrant(scheduleResource *v2.Resource, user client.User, role string) *
 		},
 	}
 
+	principalID, err := resource.NewResourceID(userResourceType, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create resource ID for user: %s", user.ID)
+	}
+
 	return grant.NewGrant(
 		roleResource,
 		role,
-		userResource,
-		grant.WithAnnotation(&v2.V1Identifier{Id: grantID}),
-	)
+		principalID,
+	), nil
 }
 
 // newScheduleBuilder initializes a new schedule builder
@@ -229,6 +225,5 @@ func NewScheduleBuilder(c *client.APIClient) *scheduleBuilder {
 	return &scheduleBuilder{
 		resourceType: scheduleResourceType,
 		client:       c,
-		logger:       zap.NewNop(),
 	}
 }

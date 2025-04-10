@@ -51,8 +51,7 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 
 		userTraits := []resource.UserTraitOption{
 			resource.WithUserProfile(profile),
-			resource.WithStatus(v2.UserTrait_Status_STATUS_ENABLED),
-			resource.WithUserLogin(user.Email),
+			resource.WithEmail(user.Email, true),
 		}
 
 		// Create a Baton user resource

@@ -32,7 +32,7 @@ func (d *Connector) Asset(ctx context.Context, asset *v2.AssetRef) (string, io.R
 func (d *Connector) Metadata(ctx context.Context) (*v2.ConnectorMetadata, error) {
 	return &v2.ConnectorMetadata{
 		DisplayName: "Incidents.io connector",
-		Description: "By Felipe Lucero",
+		Description: "sync users and schedules from incidents.io",
 	}, nil
 }
 
@@ -44,7 +44,7 @@ func (d *Connector) Validate(ctx context.Context) (annotations.Annotations, erro
 
 // New returns a new instance of the connector.
 func New(ctx context.Context, accessToken string) (*Connector, error) {
-	apiClient := client.NewClient(accessToken)
+	apiClient := client.NewClient(accessToken, nil)
 
 	return &Connector{apiClient: apiClient}, nil
 }

@@ -26,7 +26,7 @@ func initClient(t *testing.T) *client.APIClient {
 		t.Skipf("Missing required API token")
 	}
 
-	return client.NewClient(apiToken)
+	return client.NewClient(apiToken, nil)
 }
 
 func TestUserBuilderList(t *testing.T) {
