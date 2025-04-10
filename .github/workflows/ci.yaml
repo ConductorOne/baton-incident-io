@@ -60,6 +60,7 @@ jobs:
       CONNECTOR_ENTITLEMENT: 'entitlement:group:1234:member'
       CONNECTOR_PRINCIPAL: 'user:9876'
       CONNECTOR_PRINCIPAL_TYPE: 'user'
+      API_TOKEN: ${{ secrets.API_TOKEN }}
     steps:
       - name: Install Go
         uses: actions/setup-go@v5
@@ -78,7 +79,7 @@ jobs:
       - name: Build baton-incident-io
         run: go build ./cmd/baton-incident-io
       - name: Run baton-incident-io
-        run: ./baton-incident-io
+        run: ./baton-incident-io --token="${{ secrets.API_TOKEN }}"
 
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
