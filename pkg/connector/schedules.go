@@ -29,7 +29,6 @@ func (o *scheduleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List retrieves a list of schedule resources.
 func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-
 	bag, pageToken, err := getToken(pToken, scheduleResourceType)
 	if err != nil {
 		return nil, "", nil, err
@@ -79,7 +78,6 @@ func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 
 // Entitlements returns predefined roles associated with schedules.
 func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-
 	entitlementRoles := []string{
 		"On Call",
 		"Member",
@@ -100,7 +98,6 @@ func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Res
 
 // Grants assigns {'on call','member'} to users based on their schedule participation.
 func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-
 	bag, pageToken, err := getToken(pToken, userResourceType)
 	if err != nil {
 		return nil, "", nil, err
@@ -119,7 +116,6 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 	var grants []*v2.Grant
 
 	for _, schedule := range schedulesResp {
-
 		scheduleRes := &v2.Resource{
 			Id: &v2.ResourceId{
 				ResourceType: "schedule",
@@ -130,7 +126,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 
 		onCallUsers := make(map[string]bool)
 
-		//users "On Call"
+		// users "On Call"
 		for _, shift := range schedule.CurrentShifts {
 			if shift.User.ID == "" || shift.User.Email == "" || shift.User.ID == "NOBODY" {
 				continue
@@ -152,7 +148,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 			}
 		}
 
-		//users "Member"
+		// users "Member"
 		seenUsers := make(map[string]bool) // Duplicateds
 		for _, rotation := range schedule.Config.Rotation {
 			for _, user := range rotation.Users {
@@ -160,7 +156,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 					continue
 				}
 
-				//Some users could be "On Call"
+				// Some users could be "On Call"
 				if _, exists := onCallUsers[user.ID]; !exists {
 					if seenUsers[user.ID] {
 						o.logger.Warn("Duplicate user detected", zap.String("user_id", user.ID))
@@ -220,7 +216,7 @@ func createGrant(scheduleResource *v2.Resource, user client.User, role string) (
 	), nil
 }
 
-// newScheduleBuilder initializes a new schedule builder
+// newScheduleBuilder initializes a new schedule builder.
 func NewScheduleBuilder(c *client.APIClient) *scheduleBuilder {
 	return &scheduleBuilder{
 		resourceType: scheduleResourceType,

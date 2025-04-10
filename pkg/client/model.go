@@ -17,8 +17,8 @@ type User struct {
 }
 
 type Meta struct {
-	Page_size int    `json:"page_size"`
-	After     string `json:"after"`
+	PageSize int    `json:"page_size"`
+	After    string `json:"after"`
 }
 
 type Schedule struct {

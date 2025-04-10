@@ -26,7 +26,6 @@ func (o *UserBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List retrieves users and converts them into Baton resources.
 func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
-
 	bag, pageToken, err := getToken(pToken, userResourceType)
 	if err != nil {
 		return nil, "", nil, err
@@ -43,7 +42,6 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 
 	var resources []*v2.Resource
 	for _, user := range users {
-
 		profile := map[string]interface{}{
 			"user_id": user.ID,
 			"email":   user.Email,

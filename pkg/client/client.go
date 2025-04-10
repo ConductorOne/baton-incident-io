@@ -87,7 +87,7 @@ func (c *APIClient) getResourcesFromAPI(ctx context.Context, urlAddress string, 
 	return annotation, nil
 }
 
-// doRequest executes an HTTP request and processes the response
+// doRequest executes an HTTP request and processes the response.
 func (c *APIClient) doRequest(ctx context.Context, method, endpointUrl string, res any,
 	reqOptions ...ReqOpt) (http.Header, annotations.Annotations, error) {
 	logger := ctxzap.Extract(ctx)

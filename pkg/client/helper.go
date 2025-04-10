@@ -14,7 +14,7 @@ type PageOptions struct {
 	After    string
 }
 
-// WithPageLimit sets the "page_size" query parameter for pagination
+// WithPageLimit sets the "page_size" query parameter for pagination.
 func WithPageLimit(pageSize int) ReqOpt {
 	if pageSize != 0 {
 		return WithQueryParam("page_size", strconv.Itoa(pageSize))
