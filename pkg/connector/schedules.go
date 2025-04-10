@@ -79,7 +79,7 @@ func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 // Entitlements returns predefined roles associated with schedules.
 func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
 	entitlementRoles := []string{
-		"On Call",
+		"On_Call",
 		"Member",
 	}
 
@@ -137,7 +137,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 			grant, err := createGrant(scheduleRes, client.User{
 				ID:    shift.User.ID,
 				Email: shift.User.Email,
-			}, "On Call")
+			}, "On_Call")
 			if err != nil {
 				o.logger.Error("Error creating grant", zap.Error(err))
 				continue
