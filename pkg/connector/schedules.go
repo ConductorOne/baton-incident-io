@@ -11,6 +11,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +20,6 @@ import (
 type scheduleBuilder struct {
 	resourceType *v2.ResourceType
 	client       *client.APIClient
-	logger       *zap.Logger
 }
 
 // ResourceType returns the resource type associated with schedules.
@@ -29,6 +29,8 @@ func (o *scheduleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List retrieves a list of schedule resources.
 func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
 	bag, pageToken, err := getToken(pToken, scheduleResourceType)
 	if err != nil {
 		return nil, "", nil, err
@@ -40,7 +42,7 @@ func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 		PageSize: pToken.Size,
 	})
 	if err != nil {
-		o.logger.Error("Error fetching schedules", zap.Error(err))
+		l.Error("Error fetching schedules", zap.Error(err))
 		return nil, "", nil, fmt.Errorf("error fetching schedules: %w", err)
 	}
 
@@ -98,6 +100,8 @@ func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Res
 
 // Grants assigns {'on call','member'} to users based on their schedule participation.
 func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
 	bag, pageToken, err := getToken(pToken, userResourceType)
 	if err != nil {
 		return nil, "", nil, err
@@ -109,7 +113,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 		PageSize: pToken.Size,
 	})
 	if err != nil {
-		o.logger.Error("Error fetching schedules", zap.Error(err))
+		l.Error("Error fetching schedules", zap.Error(err))
 		return nil, "", nil, fmt.Errorf("error fetching schedules: %w", err)
 	}
 
@@ -139,7 +143,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 				Email: shift.User.Email,
 			}, "On_Call")
 			if err != nil {
-				o.logger.Error("Error creating grant", zap.Error(err))
+				l.Error("Error creating grant", zap.Error(err))
 				continue
 			}
 
@@ -159,7 +163,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 				// Some users could be "On Call"
 				if _, exists := onCallUsers[user.ID]; !exists {
 					if seenUsers[user.ID] {
-						o.logger.Warn("Duplicate user detected", zap.String("user_id", user.ID))
+						l.Warn("Duplicate user detected", zap.String("user_id", user.ID))
 						continue
 					}
 
@@ -170,7 +174,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 						Email: user.Email,
 					}, "Member")
 					if err != nil {
-						o.logger.Error("Error creating grant", zap.Error(err))
+						l.Error("Error creating grant", zap.Error(err))
 						continue
 					}
 

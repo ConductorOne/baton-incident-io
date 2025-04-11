@@ -9,6 +9,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +17,6 @@ import (
 type UserBuilder struct {
 	resourceType *v2.ResourceType
 	client       *client.APIClient
-	logger       *zap.Logger
 }
 
 // ResourceType returns the type of resource managed by this builder.
@@ -26,6 +26,8 @@ func (o *UserBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 
 // List retrieves users and converts them into Baton resources.
 func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+	l := ctxzap.Extract(ctx)
+
 	bag, pageToken, err := getToken(pToken, userResourceType)
 	if err != nil {
 		return nil, "", nil, err
@@ -36,7 +38,7 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		PageSize: pToken.Size,
 	})
 	if err != nil {
-		o.logger.Error("Error fetching users", zap.Error(err))
+		l.Error("Error fetching users", zap.Error(err))
 		return nil, "", nil, fmt.Errorf("error fetching users: %w", err)
 	}
 
@@ -93,6 +95,5 @@ func NewUserBuilder(c *client.APIClient) *UserBuilder {
 	return &UserBuilder{
 		resourceType: userResourceType,
 		client:       c,
-		logger:       zap.NewExample(),
 	}
 }
