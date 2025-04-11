@@ -6,10 +6,17 @@ import (
 )
 
 var (
+	tokenField = field.StringField(
+		"token",
+		field.WithDescription("token"),
+		field.WithRequired(true),
+	)
+
 	// ConfigurationFields defines the external configuration required for the
 	// connector to run. Note: these fields can be marked as optional or
 	// required.
-	ConfigurationFields = []field.SchemaField{}
+
+	ConfigurationFields = []field.SchemaField{tokenField}
 
 	// FieldRelationships defines relationships between the fields listed in
 	// ConfigurationFields that can be automatically validated. For example, a
