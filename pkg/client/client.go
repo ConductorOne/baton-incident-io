@@ -131,3 +131,23 @@ func (c *APIClient) doRequest(ctx context.Context, method, endpointUrl string, r
 
 	return response.Header, annotation, nil
 }
+
+func (c *APIClient) GetUser(ctx context.Context, userID string) (*User, error) {
+	l := ctxzap.Extract(ctx)
+
+	var res SingleUserResponse
+
+	endpointURL, err := url.JoinPath(baseDomain, getUsersEndpoint, userID)
+	if err != nil {
+		l.Error("failed to build user URL", zap.Error(err))
+		return nil, err
+	}
+
+	_, _, err = c.doRequest(ctx, http.MethodGet, endpointURL, &res)
+	if err != nil {
+		l.Error("failed to get user", zap.Error(err))
+		return nil, err
+	}
+
+	return &res.User, nil
+}

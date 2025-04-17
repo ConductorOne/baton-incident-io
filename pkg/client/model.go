@@ -10,10 +10,23 @@ type ScheduleResponse struct {
 	Meta     Meta       `json:"pagination_meta"`
 }
 
+type SingleUserResponse struct {
+	User User `json:"user"`
+}
+
 type User struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Email       string     `json:"email"`
+	BaseRole    BaseRole   `json:"base_role"`
+	CustomRoles []BaseRole `json:"custom_roles,omitempty"`
+}
+
+type BaseRole struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Slug        string `json:"slug"`
 }
 
 type Meta struct {
