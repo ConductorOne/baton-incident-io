@@ -57,7 +57,20 @@ func TestIncidentClient_GetUsers(t *testing.T) {
 			Email: test.Users[index]["email"].(string),
 		}
 
-		if !reflect.DeepEqual(user, expectedUser) {
+		if baseRoleData, ok := test.Users[index]["base_role"].(map[string]interface{}); ok {
+			expectedUser.BaseRole = client.BaseRole{
+				ID:          baseRoleData["id"].(string),
+				Name:        baseRoleData["name"].(string),
+				Description: baseRoleData["description"].(string),
+				Slug:        baseRoleData["slug"].(string),
+			}
+		}
+
+		if user.ID != expectedUser.ID ||
+			user.Name != expectedUser.Name ||
+			user.Email != expectedUser.Email ||
+			!reflect.DeepEqual(user.BaseRole, expectedUser.BaseRole) ||
+			len(user.CustomRoles) != len(expectedUser.CustomRoles) {
 			t.Errorf("Unexpected user: got %+v, want %+v", user, expectedUser)
 		}
 	}
