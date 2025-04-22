@@ -15,14 +15,14 @@ type SingleUserResponse struct {
 }
 
 type User struct {
-	ID          string     `json:"id"`
-	Name        string     `json:"name"`
-	Email       string     `json:"email"`
-	BaseRole    BaseRole   `json:"base_role"`
-	CustomRoles []BaseRole `json:"custom_roles,omitempty"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	BaseRole    Role   `json:"base_role"`
+	CustomRoles []Role `json:"custom_roles,omitempty"`
 }
 
-type BaseRole struct {
+type Role struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`

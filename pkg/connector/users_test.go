@@ -58,7 +58,7 @@ func TestIncidentClient_GetUsers(t *testing.T) {
 		}
 
 		if baseRoleData, ok := test.Users[index]["base_role"].(map[string]interface{}); ok {
-			expectedUser.BaseRole = client.BaseRole{
+			expectedUser.BaseRole = client.Role{
 				ID:          baseRoleData["id"].(string),
 				Name:        baseRoleData["name"].(string),
 				Description: baseRoleData["description"].(string),

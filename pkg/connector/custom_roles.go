@@ -41,7 +41,7 @@ func (o *customRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 		return nil, "", nil, err
 	}
 
-	roleMap := make(map[string]client.BaseRole)
+	roleMap := make(map[string]client.Role)
 
 	for _, user := range users {
 		for _, cr := range user.CustomRoles {

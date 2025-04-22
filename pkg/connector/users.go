@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const RoleGrantPermission = "assigned"
+const roleGrantPermission = "assigned"
 
 // userBuilder manages user-related resources.
 type UserBuilder struct {
@@ -114,7 +114,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 
 		grant := grant.NewGrant(
 			baseRoleResource,
-			RoleGrantPermission,
+			roleGrantPermission,
 			res,
 			grant.WithAnnotation(&v2.V1Identifier{
 				Id: fmt.Sprintf("base-role-grant:%s:%s", user.BaseRole.ID, userID),
@@ -138,7 +138,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 
 		grant := grant.NewGrant(
 			customRoleResource,
-			RoleGrantPermission,
+			roleGrantPermission,
 			res,
 			grant.WithAnnotation(&v2.V1Identifier{
 				Id: fmt.Sprintf("custom-role-grant:%s:%s", cr.ID, userID),

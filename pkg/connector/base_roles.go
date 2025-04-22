@@ -40,7 +40,7 @@ func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 		return nil, "", nil, fmt.Errorf("error fetching users for base roles: %w", err)
 	}
 
-	roleMap := make(map[string]client.BaseRole)
+	roleMap := make(map[string]client.Role)
 
 	for _, user := range users {
 		if user.BaseRole.ID == "" {
@@ -55,7 +55,7 @@ func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 	var resources []*v2.Resource
 	for _, baseRole := range roleMap {
 		baseRoleCopy := baseRole
-		groupResource, err := resource.NewRoleResource(
+		roleResource, err := resource.NewRoleResource(
 			baseRoleCopy.Name,
 			baseRoleResourceType,
 			baseRoleCopy.ID,
@@ -63,10 +63,10 @@ func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 			resource.WithDescription(baseRoleCopy.Description),
 		)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating base role group resource: %w", err)
+			return nil, "", nil, fmt.Errorf("error creating base role resource: %w", err)
 		}
 
-		resources = append(resources, groupResource)
+		resources = append(resources, roleResource)
 	}
 	err = bag.Next(nextPageToken)
 	if err != nil {
