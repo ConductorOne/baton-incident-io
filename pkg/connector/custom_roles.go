@@ -97,6 +97,7 @@ func (o *customRoleBuilder) Entitlements(_ context.Context, resource *v2.Resourc
 	return entitlements, "", nil, nil
 }
 
+// The logic for role grants is implemented in users.go for performance reasons.
 func (o *customRoleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }

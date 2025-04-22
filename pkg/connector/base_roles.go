@@ -53,15 +53,14 @@ func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 	}
 
 	var resources []*v2.Resource
-	for _, br := range roleMap {
-		brCopy := br
-		groupResource, err := resource.NewGroupResource(
-			brCopy.Name,
+	for _, baseRole := range roleMap {
+		baseRoleCopy := baseRole
+		groupResource, err := resource.NewRoleResource(
+			baseRoleCopy.Name,
 			baseRoleResourceType,
-			brCopy.ID,
+			baseRoleCopy.ID,
 			nil,
-			resource.WithDescription(brCopy.Description),
-			resource.WithParentResourceID(parentResourceID),
+			resource.WithDescription(baseRoleCopy.Description),
 		)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("error creating base role group resource: %w", err)
@@ -95,6 +94,7 @@ func (b *baseRoleBuilder) Entitlements(_ context.Context, resource *v2.Resource,
 	return entitlements, "", nil, nil
 }
 
+// The logic for role grants is implemented in users.go for performance reasons.
 func (b *baseRoleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	return nil, "", nil, nil
 }

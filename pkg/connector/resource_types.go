@@ -11,12 +11,12 @@ var userResourceType = &v2.ResourceType{
 }
 
 var baseRoleResourceType = &v2.ResourceType{
-	Id:          "baseRole",
+	Id:          "base-Role",
 	DisplayName: "baseRole",
 }
 
 var customRoleResourceType = &v2.ResourceType{
-	Id:          "customRole",
+	Id:          "custom-Role",
 	DisplayName: "customRole",
 }
 

@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const RoleGrantPermission = "assigned"
+
 // userBuilder manages user-related resources.
 type UserBuilder struct {
 	resourceType *v2.ResourceType
@@ -88,7 +90,7 @@ func (o *UserBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *
 	return nil, "", nil, nil
 }
 
-// Grants always returns an empty slice for users since they don't have any entitlements.
+// Role grants are implemented here for performance reasons.
 func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 	userID := res.Id.Resource
@@ -112,7 +114,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 
 		grant := grant.NewGrant(
 			baseRoleResource,
-			"assigned",
+			RoleGrantPermission,
 			res,
 			grant.WithAnnotation(&v2.V1Identifier{
 				Id: fmt.Sprintf("base-role-grant:%s:%s", user.BaseRole.ID, userID),
@@ -136,7 +138,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 
 		grant := grant.NewGrant(
 			customRoleResource,
-			"assigned",
+			RoleGrantPermission,
 			res,
 			grant.WithAnnotation(&v2.V1Identifier{
 				Id: fmt.Sprintf("custom-role-grant:%s:%s", cr.ID, userID),
