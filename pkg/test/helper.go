@@ -14,11 +14,23 @@ var (
 			"id":    "01JPWQNM50YGKQYFJYW61BBPD7",
 			"name":  "test",
 			"email": "test@example.com",
+			"base_role": map[string]interface{}{
+				"id":          "01JPWQNJKADS4VZ8PEYV0PAQPA",
+				"name":        "Owner",
+				"description": "A base role managed by incident.io for owners of your account.",
+				"slug":        "owner",
+			},
 		},
 		{
 			"id":    "01JPWQP39ZE3X1NRHC3PJAWZVQ",
 			"name":  "Alejandro",
 			"email": "alejandro@example.com",
+			"base_role": map[string]interface{}{
+				"id":          "01JPWQNJKAC407555HM47MP2V4",
+				"name":        "Standard",
+				"description": "A base role managed by incident.io for users within your account.",
+				"slug":        "user",
+			},
 		},
 	}
 )

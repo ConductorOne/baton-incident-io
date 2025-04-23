@@ -21,8 +21,6 @@ jobs:
         go-version: [1.22.x]
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
-    env:
-      INCIDENT_API_TOKEN: ${{ secrets.API_TOKEN }}
     steps:
       - name: Install Go
         if: success()
@@ -87,7 +85,7 @@ jobs:
       - name: Check for grant before revoking
 
         run:
-         baton grants --entitlement="schedule:01JQ77YN7BRVRA81T9STQ41HB2:On Call"
+         baton grants --entitlement=${{ secrets.ENTITLEMENT }}
 
 
      # - name: Revoke grants

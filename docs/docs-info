@@ -1,0 +1,45 @@
+While developing the connector, please fill out this form. This information is needed to write docs and to help other users set up the connector.
+
+## Connector capabilities
+
+1. What resources does the connector sync?
+
+   This connector syncs:
+      -Users
+      -Schedules
+      -Base Roles (These are predefined roles provided by Incident.io. The default types are: owner, admin, and viewer.)
+      (These roles may be editable depending on the organization's plan.)
+      -Custom Roles (These are user-defined roles created by Enterprise plan customers.)
+      
+      Note: In order to sync both base and custom roles, the connector first fetches the list of users, since roles are only available as part of user data.
+
+2. Can the connector provision any resources? If so, which ones? 
+
+   -No, the connector is read-only. It does not provision or modify any resources in Incident.io.
+
+## Connector credentials 
+
+1. What credentials or information are needed to set up the connector? (For example, API key, client ID and secret, domain, etc.)
+
+   -This connector requires an API Key. Args: --token
+
+2. For each item in the list above: 
+
+   * How does a user create or look up that credential or info? Please include links to (non-gated) documentation, screenshots (of the UI or of gated docs), or a video of the process. 
+
+   -Login
+   https://app.incident.io/batonc1ent/dashboard
+   On the left sidebar, scroll down and click on Settings.
+   Under the Extend section, click on API keys.
+   If your account has the proper permissions (e.g. an Enterprise plan), you'll be able to generate or view an API Key from this screen.
+
+   * Does the credential need any specific scopes or permissions? If so, list them here. 
+
+      -To access Schedules, the user needs permission to view the On-call section.
+      -To sync or provision Custom Roles, the account must be on an Enterprise plan (or any plan that enables custom roles).
+
+   * If applicable: Is the list of scopes or permissions different to sync (read) versus provision (read-write)? If so, list the difference here. 
+
+   * What level of access or permissions does the user need in order to create the credentials? (For example, must be a super administrator, must have access to the admin console, etc.)  
+
+   -the Enterprise plan (or a plan with API access enabled) is required to be able to generate API keys.

@@ -19,6 +19,8 @@ func (d *Connector) ResourceSyncers(ctx context.Context) []connectorbuilder.Reso
 	return []connectorbuilder.ResourceSyncer{
 		NewUserBuilder(d.apiClient),
 		NewScheduleBuilder(d.apiClient),
+		NewBaseRoleBuilder(d.apiClient),
+		NewCustomRoleBuilder(d.apiClient),
 	}
 }
 
