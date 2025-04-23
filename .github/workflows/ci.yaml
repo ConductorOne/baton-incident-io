@@ -22,7 +22,7 @@ jobs:
         platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     env:
-      INCIDENT_API_TOKEN: ${{ secrets.API_TOKEN }}
+      BATON_API_TOKEN: ${{ secrets.API_TOKEN }}
       ENTITLEMENT : ${{ secrets.ENTITLEMENT }}
     steps:
       - name: Install Go
@@ -80,7 +80,7 @@ jobs:
       - name: Build baton-incident-io
         run: go build ./cmd/baton-incident-io
       - name: Run baton-incident-io
-        run: ./baton-incident-io --token="${{ secrets.API_TOKEN }}"
+        run: ./baton-incident-io
 
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin

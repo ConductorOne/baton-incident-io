@@ -116,9 +116,6 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 			baseRoleResource,
 			roleGrantPermission,
 			res,
-			grant.WithAnnotation(&v2.V1Identifier{
-				Id: fmt.Sprintf("base-role-grant:%s:%s", user.BaseRole.ID, userID),
-			}),
 		)
 		grants = append(grants, grant)
 	}
@@ -140,9 +137,6 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 			customRoleResource,
 			roleGrantPermission,
 			res,
-			grant.WithAnnotation(&v2.V1Identifier{
-				Id: fmt.Sprintf("custom-role-grant:%s:%s", cr.ID, userID),
-			}),
 		)
 		grants = append(grants, grant)
 	}

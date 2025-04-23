@@ -11,13 +11,13 @@ var userResourceType = &v2.ResourceType{
 }
 
 var baseRoleResourceType = &v2.ResourceType{
-	Id:          "base-Role",
-	DisplayName: "baseRole",
+	Id:          "base-role",
+	DisplayName: "base Role",
 }
 
 var customRoleResourceType = &v2.ResourceType{
-	Id:          "custom-Role",
-	DisplayName: "customRole",
+	Id:          "custom-role",
+	DisplayName: "custom Role",
 }
 
 var scheduleResourceType = &v2.ResourceType{
