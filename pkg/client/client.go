@@ -36,6 +36,7 @@ func NewClient(apiToken string, httpClient *uhttp.BaseHttpClient) *APIClient {
 }
 
 // ListSchedules retrieves a list of schedules from the API.
+// https://api-docs.incident.io/tag/Schedules-V2#operation/Schedules%20V2_List.
 func (c *APIClient) ListSchedules(ctx context.Context, options PageOptions) ([]Schedule, string, annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 	var res ScheduleResponse
@@ -57,6 +58,7 @@ func (c *APIClient) ListSchedules(ctx context.Context, options PageOptions) ([]S
 }
 
 // ListUsers retrieves a list of users from the API.
+// https://api-docs.incident.io/tag/Users-V2/#operation/Users%20V2_List.
 func (c *APIClient) ListUsers(ctx context.Context, options PageOptions) ([]User, string, annotations.Annotations, error) {
 	l := ctxzap.Extract(ctx)
 	var res UserResponse
@@ -132,6 +134,8 @@ func (c *APIClient) doRequest(ctx context.Context, method, endpointUrl string, r
 	return response.Header, annotation, nil
 }
 
+// GetUser retrieves a user by their ID from the API.
+// https://api-docs.incident.io/tag/Users-V2#operation/Users%20V2_Show.
 func (c *APIClient) GetUser(ctx context.Context, userID string) (*User, error) {
 	l := ctxzap.Extract(ctx)
 

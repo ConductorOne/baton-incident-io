@@ -55,15 +55,14 @@ func (o *customRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resou
 	}
 
 	var resources []*v2.Resource
-	for _, cr := range roleMap {
-		crCopy := cr
-		groupResource, err := resource.NewGroupResource(
-			crCopy.Name,
+	for _, customRole := range roleMap {
+		customRoleCopy := customRole
+		groupResource, err := resource.NewRoleResource(
+			customRoleCopy.Name,
 			customRoleResourceType,
-			crCopy.ID,
+			customRoleCopy.ID,
 			nil,
-			resource.WithDescription(crCopy.Description),
-			resource.WithParentResourceID(parentResourceID),
+			resource.WithDescription(customRoleCopy.Description),
 		)
 		if err != nil {
 			return nil, "", nil, err
