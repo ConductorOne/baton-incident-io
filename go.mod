@@ -5,7 +5,7 @@ go 1.23.4
 toolchain go1.23.8
 
 require (
-	github.com/conductorone/baton-sdk v0.2.94
+	github.com/conductorone/baton-sdk v0.3.45
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
@@ -14,6 +14,8 @@ require (
 )
 
 require github.com/joho/godotenv v1.5.1
+
+require golang.org/x/term v0.29.0 // indirect
 
 require (
 	filippo.io/age v1.2.1 // indirect
