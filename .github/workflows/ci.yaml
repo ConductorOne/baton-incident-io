@@ -82,6 +82,9 @@ jobs:
       - name: Install baton
         run: ./scripts/get-baton.sh && mv baton /usr/local/bin
 
+      - name: Run capabilities
+        run: ./baton-incident-io capabilities --token="${{ secrets.API_TOKEN }}"
+
       - name: Check for grant before revoking
 
         run:
