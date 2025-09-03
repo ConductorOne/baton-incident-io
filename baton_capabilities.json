@@ -3,6 +3,36 @@
   "resourceTypeCapabilities": [
     {
       "resourceType": {
+        "id": "base-role",
+        "displayName": "base Role"
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
+        "id": "custom-role",
+        "displayName": "custom Role"
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
+        "id": "schedule",
+        "displayName": "schedule",
+        "traits": [
+          "TRAIT_GROUP"
+        ]
+      },
+      "capabilities": [
+        "CAPABILITY_SYNC"
+      ]
+    },
+    {
+      "resourceType": {
         "id": "user",
         "displayName": "User",
         "traits": [
