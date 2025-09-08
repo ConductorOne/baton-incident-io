@@ -209,6 +209,7 @@ type syncer struct {
 	counts                              *ProgressCounts
 	targetedSyncResourceIDs             []string
 	onlyExpandGrants                    bool
+	dontExpandGrants                    bool
 	syncID                              string
 	skipEGForResourceType               map[string]bool
 	skipEntitlementsAndGrants           bool
@@ -533,7 +534,7 @@ func (s *syncer) Sync(ctx context.Context) error {
 			continue
 
 		case SyncGrantExpansionOp:
-			if !s.state.NeedsExpansion() {
+			if s.dontExpandGrants || !s.state.NeedsExpansion() {
 				l.Debug("skipping grant expansion, no grants to expand")
 				s.state.FinishAction(ctx)
 				continue
@@ -1361,18 +1362,18 @@ func (s *syncer) SyncGrantExpansion(ctx context.Context) error {
 	}
 
 	if entitlementGraph.Loaded {
-		cycle := entitlementGraph.GetFirstCycle()
-		if cycle != nil {
+		comps := entitlementGraph.ComputeCyclicComponents(ctx)
+		if len(comps) > 0 {
+			// Log a sample cycle
 			l.Warn(
 				"cycle detected in entitlement graph",
-				zap.Any("cycle", cycle),
+				zap.Any("cycle", comps[0]),
 			)
 			l.Debug("initial graph", zap.Any("initial graph", entitlementGraph))
 			if dontFixCycles {
 				return fmt.Errorf("cycles detected in entitlement graph")
 			}
-
-			err := entitlementGraph.FixCycles()
+			err := entitlementGraph.FixCyclesFromComponents(ctx, comps)
 			if err != nil {
 				return err
 			}
@@ -1614,7 +1615,7 @@ func (s *syncer) syncGrantsForResource(ctx context.Context, resourceID *v2.Resou
 	l := ctxzap.Extract(ctx)
 	for _, grant := range grants {
 		grantAnnos := annotations.Annotations(grant.GetAnnotations())
-		if grantAnnos.Contains(&v2.GrantExpandable{}) {
+		if !s.dontExpandGrants && grantAnnos.Contains(&v2.GrantExpandable{}) {
 			s.state.SetNeedsExpansion()
 		}
 		if grantAnnos.ContainsAny(&v2.ExternalResourceMatchAll{}, &v2.ExternalResourceMatch{}, &v2.ExternalResourceMatchID{}) {
@@ -2411,7 +2412,7 @@ func (s *syncer) runGrantExpandActions(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("runGrantExpandActions: error fetching source grants: %w", err)
 	}
 
-	var newGrants []*v2.Grant = make([]*v2.Grant, 0)
+	var newGrants = make([]*v2.Grant, 0)
 	for _, sourceGrant := range sourceGrants.List {
 		// Skip this grant if it is not for a resource type we care about
 		if len(action.ResourceTypeIDs) > 0 {
@@ -2764,6 +2765,11 @@ func WithOnlyExpandGrants() SyncOpt {
 	}
 }
 
+func WithDontExpandGrants() SyncOpt {
+	return func(s *syncer) {
+		s.dontExpandGrants = true
+	}
+}
 func WithSyncID(syncID string) SyncOpt {
 	return func(s *syncer) {
 		s.syncID = syncID
