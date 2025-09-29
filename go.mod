@@ -1,21 +1,22 @@
 module github.com/conductorone/baton-incident-io
 
-go 1.23.4
-
-toolchain go1.23.8
+go 1.25
 
 require (
-	github.com/conductorone/baton-sdk v0.3.45
+	github.com/conductorone/baton-sdk v0.4.5
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
-	github.com/spf13/viper v1.20.1
+	github.com/spf13/viper v1.20.1 // indirect
 	go.uber.org/zap v1.27.0
 )
 
 require github.com/joho/godotenv v1.5.1
 
-require golang.org/x/term v0.29.0 // indirect
+require (
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
+)
 
 require (
 	filippo.io/age v1.2.1 // indirect
@@ -65,7 +66,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jellydator/ttlcache/v3 v3.3.0 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20240909124753-873cd0166683 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/maypok86/otter v1.2.4 // indirect
