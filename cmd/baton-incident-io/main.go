@@ -26,7 +26,7 @@ func main() {
 		"baton-incident-io",
 		getConnector,
 		config.Config,
-		connectorrunner.WithDefaultCapabilitiesConnectorBuilder(&connector.Connector{}),
+		connectorrunner.WithDefaultCapabilitiesConnectorBuilder(&connector.IncidentIo{}),
 	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
