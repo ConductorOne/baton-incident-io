@@ -1,6 +1,6 @@
 ![Baton Logo](./baton-logo.png)
 
-# `baton-incident-io` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-incident-io.svg)](https://pkg.go.dev/github.com/conductorone/baton-incident-io) ![main ci](https://github.com/conductorone/baton-incident-io/actions/workflows/main.yaml/badge.svg)
+# `baton-incident-io` [![Go Reference](https://pkg.go.dev/badge/github.com/conductorone/baton-incident-io.svg)](https://pkg.go.dev/github.com/conductorone/baton-incident-io) ![ci](https://github.com/conductorone/baton-incident-io/actions/workflows/ci.yaml/badge.svg)
 
 `baton-incident-io` is a connector for built using the [Baton SDK](https://github.com/conductorone/baton-sdk).
 
