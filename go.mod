@@ -8,8 +8,8 @@ require (
 	github.com/conductorone/baton-sdk v0.3.45
 	github.com/ennyjfrick/ruleguard-logfatal v0.0.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
-	github.com/quasilyte/go-ruleguard/dsl v0.3.22
-	github.com/spf13/viper v1.20.1
+	github.com/quasilyte/go-ruleguard/dsl v0.3.23
+	github.com/spf13/viper v1.20.1 // indirect
 	go.uber.org/zap v1.27.0
 )
 
