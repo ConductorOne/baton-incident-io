@@ -16,6 +16,8 @@ var (
 
 var configFields = []field.SchemaField{tokenField}
 
+//go:generate go run ./gen
+
 // Config represents the configuration for the baton-incident-io connector.
 var Config = field.NewConfiguration(
 	configFields,

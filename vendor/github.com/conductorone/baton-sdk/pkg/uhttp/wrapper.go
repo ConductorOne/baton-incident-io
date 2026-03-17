@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/metrics"
 	"github.com/conductorone/baton-sdk/pkg/ratelimit"
 )
 
@@ -33,6 +35,11 @@ const (
 	applicationVndApiJSON     = "application/vnd.api+json"
 	acceptHeader              = "Accept"
 	authorizationHeader       = "Authorization"
+
+	httpCacheHitCounterName  = "baton_sdk.http_cache_hit"
+	httpCacheMissCounterName = "baton_sdk.http_cache_miss"
+	httpCacheHitCounterDesc  = "number of HTTP cache hits"
+	httpCacheMissCounterDesc = "number of HTTP cache misses"
 )
 
 type WrapperResponse struct {
@@ -63,25 +70,44 @@ func WithRateLimiter(rate int, per time.Duration) WrapperOption {
 	return rateLimiterOption{rate: rate, per: per}
 }
 
+type metricsHandlerOption struct {
+	handler metrics.Handler
+}
+
+func (o metricsHandlerOption) Apply(c *BaseHttpClient) {
+	c.metricsHandler = o.handler
+}
+
+// WithMetricsHandler returns a WrapperOption that sets the metrics handler for the http client.
+// When set, cache hits and misses will be recorded as metrics.
+func WithMetricsHandler(handler metrics.Handler) WrapperOption {
+	return metricsHandlerOption{handler: handler}
+}
+
 type WrapperOption interface {
 	Apply(*BaseHttpClient)
 }
 
 // Keep a handle on all caches so we can clear them later.
-var caches []icache
+var (
+	caches    []icache
+	cachesMtx sync.RWMutex
+)
 
 func ClearCaches(ctx context.Context) error {
 	l := ctxzap.Extract(ctx)
 	l.Debug("clearing caches")
-	var err error
+	var errs []error
+	cachesMtx.RLock()
+	defer cachesMtx.RUnlock()
 	for _, cache := range caches {
 		l.Debug("clearing cache", zap.String("cache", fmt.Sprintf("%T", cache)), zap.Any("stats", cache.Stats(ctx)))
-		err = cache.Clear(ctx)
+		err := cache.Clear(ctx)
 		if err != nil {
-			err = errors.Join(err, err)
+			errs = append(errs, err)
 		}
 	}
-	return err
+	return errors.Join(errs...)
 }
 
 type (
@@ -91,9 +117,10 @@ type (
 		NewRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) (*http.Request, error)
 	}
 	BaseHttpClient struct {
-		HttpClient    *http.Client
-		rateLimiter   uRateLimit.Limiter
-		baseHttpCache icache
+		HttpClient     *http.Client
+		rateLimiter    uRateLimit.Limiter
+		baseHttpCache  icache
+		metricsHandler metrics.Handler
 	}
 
 	DoOption      func(resp *WrapperResponse) error
@@ -122,7 +149,9 @@ func NewBaseHttpClientWithContext(ctx context.Context, httpClient *http.Client, 
 		baseHttpCache: cache,
 	}
 
+	cachesMtx.Lock()
 	caches = append(caches, cache)
+	cachesMtx.Unlock()
 
 	for _, opt := range opts {
 		opt.Apply(cli)
@@ -242,10 +271,10 @@ func WithRatelimitData(resource *v2.RateLimitDescription) DoOption {
 			return err
 		}
 
-		resource.Limit = rl.Limit
-		resource.Remaining = rl.Remaining
-		resource.ResetAt = rl.ResetAt
-		resource.Status = rl.Status
+		resource.SetLimit(rl.GetLimit())
+		resource.SetRemaining(rl.GetRemaining())
+		resource.SetResetAt(rl.GetResetAt())
+		resource.SetStatus(rl.GetStatus())
 
 		return nil
 	}
@@ -341,6 +370,22 @@ func WrapErrorsWithRateLimitInfo(preferredCode codes.Code, resp *http.Response, 
 	return errors.Join(allErrs...)
 }
 
+func (c *BaseHttpClient) recordCacheHit(ctx context.Context) {
+	if c.metricsHandler == nil {
+		return
+	}
+	counter := c.metricsHandler.Int64Counter(httpCacheHitCounterName, httpCacheHitCounterDesc, metrics.Dimensionless)
+	counter.Add(ctx, 1, nil)
+}
+
+func (c *BaseHttpClient) recordCacheMiss(ctx context.Context) {
+	if c.metricsHandler == nil {
+		return
+	}
+	counter := c.metricsHandler.Int64Counter(httpCacheMissCounterName, httpCacheMissCounterDesc, metrics.Dimensionless)
+	counter.Add(ctx, 1, nil)
+}
+
 func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Response, error) {
 	var (
 		err  error
@@ -359,9 +404,9 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 			return nil, err
 		}
 		if resp == nil {
-			l.Debug("http cache miss", zap.String("url", req.URL.String()))
+			c.recordCacheMiss(req.Context())
 		} else {
-			l.Debug("http cache hit", zap.String("url", req.URL.String()))
+			c.recordCacheHit(req.Context())
 		}
 	}
 
@@ -369,6 +414,13 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 		resp, err = c.HttpClient.Do(req)
 		if err != nil {
 			l.Error("base-http-client: HTTP error response", zap.Error(err))
+			// Turn certain network errors into grpc statuses so we retry
+			if errors.Is(err, io.ErrUnexpectedEOF) {
+				return resp, WrapErrors(codes.Unavailable, "unexpected EOF", err)
+			}
+			if errors.Is(err, syscall.ECONNRESET) {
+				return nil, WrapErrors(codes.Unavailable, "connection reset", err)
+			}
 			var urlErr *url.Error
 			if errors.As(err, &urlErr) {
 				if urlErr.Timeout() {
@@ -426,7 +478,7 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 
 	// Log response headers directly for certain errors
 	if resp.StatusCode >= 400 {
-		redactedHeaders := redactHeaders(resp.Header)
+		redactedHeaders := RedactSensitiveHeaders(resp.Header)
 		l.Error("base-http-client: HTTP error status",
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("status", resp.Status),
@@ -469,13 +521,34 @@ func (c *BaseHttpClient) Do(req *http.Request, options ...DoOption) (*http.Respo
 	return resp, errors.Join(optErrs...)
 }
 
-func redactHeaders(h http.Header) http.Header {
+var sensitiveStrings = []string{
+	"api-key",
+	"auth",
+	"cookie",
+	"proxy-authorization",
+	"set-cookie",
+	"x-forwarded-for",
+	"x-forwarded-proto",
+}
+
+func RedactSensitiveHeaders(h http.Header) http.Header {
+	if h == nil {
+		return nil
+	}
 	safe := make(http.Header, len(h))
 	for k, v := range h {
-		switch strings.ToLower(k) {
-		case "authorization", "set-cookie", "cookie":
+		sensitive := false
+		headerKey := strings.ToLower(k)
+		for _, sensitiveString := range sensitiveStrings {
+			if strings.Contains(headerKey, sensitiveString) {
+				sensitive = true
+				break
+			}
+		}
+
+		if sensitive {
 			safe[k] = []string{"REDACTED"}
-		default:
+		} else {
 			safe[k] = v
 		}
 	}
@@ -598,7 +671,7 @@ func WithBearerToken(token string) RequestOption {
 
 func (c *BaseHttpClient) NewRequest(ctx context.Context, method string, url *url.URL, options ...RequestOption) (*http.Request, error) {
 	var buffer io.ReadWriter
-	var headers map[string]string = make(map[string]string)
+	var headers = make(map[string]string)
 	for _, option := range options {
 		buf, h, err := option()
 		if err != nil {

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/conductorone/baton-sdk/pkg/connectorstore"
 )
 
 func cloneTableQuery(tableName string) (string, error) {
@@ -72,19 +74,24 @@ func (c *C1File) CloneSync(ctx context.Context, outPath string, syncID string) (
 	}()
 
 	dbPath := filepath.Join(tmpDir, "db")
-	out, err := NewC1File(ctx, dbPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
 
-	err = out.init(ctx)
+	// Create a temporary C1File to initialize the schema in the new db.
+	// NewC1File calls init() internally, creating all required tables.
+	// We close only the rawDb to release the connection and file locks
+	// without triggering C1File.Close()'s cleanupDbDir which would
+	// remove the tmpDir we still need.
+	initFile, err := NewC1File(ctx, dbPath)
 	if err != nil {
 		return err
 	}
+	if err = initFile.rawDb.Close(); err != nil {
+		return err
+	}
+	initFile.rawDb = nil
+	initFile.db = nil
 
 	if syncID == "" {
-		syncID, err = c.LatestSyncID(ctx)
+		syncID, err = c.LatestSyncID(ctx, connectorstore.SyncTypeFull)
 		if err != nil {
 			return err
 		}
@@ -133,14 +140,15 @@ func (c *C1File) CloneSync(ctx context.Context, outPath string, syncID string) (
 	canc()
 	_ = conn.Close()
 
-	// Hack to wrap the db in a tempdir in a C1Z
+	// Open a fresh C1File to compress the populated db into a c1z.
+	// No other connections are open on dbPath at this point.
 	outFile, err := NewC1File(ctx, dbPath)
 	if err != nil {
 		return err
 	}
 	outFile.dbUpdated = true
 	outFile.outputFilePath = outPath
-	err = outFile.Close()
+	err = outFile.Close(ctx)
 	if err != nil {
 		return err
 	}
