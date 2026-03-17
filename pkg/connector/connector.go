@@ -14,9 +14,9 @@ type IncidentIo struct {
 	apiClient *client.APIClient
 }
 
-// ResourceSyncers returns a ResourceSyncer for each resource type that should be synced from the upstream service.
-func (d *IncidentIo) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncer {
-	return []connectorbuilder.ResourceSyncer{
+// ResourceSyncers returns a ResourceSyncerV2 for each resource type that should be synced from the upstream service.
+func (d *IncidentIo) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
+	return []connectorbuilder.ResourceSyncerV2{
 		NewUserBuilder(d.apiClient),
 		NewScheduleBuilder(d.apiClient),
 		NewBaseRoleBuilder(d.apiClient),

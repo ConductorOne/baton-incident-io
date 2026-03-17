@@ -8,6 +8,7 @@ import (
 	"github.com/conductorone/baton-incident-io/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/pagination"
+	"github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +16,9 @@ import (
 var (
 	ctx              = context.Background()
 	parentResourceID = &v2.ResourceId{}
-	pToken           = &pagination.Token{Size: 10}
+	syncOpts         = resource.SyncOpAttrs{
+		PageToken: pagination.Token{Size: 10},
+	}
 )
 
 func initClient(t *testing.T) *client.APIClient {
@@ -34,7 +37,7 @@ func TestUserBuilderList(t *testing.T) {
 
 	u := NewUserBuilder(c)
 
-	res, _, _, err := u.List(ctx, parentResourceID, pToken)
+	res, _, err := u.List(ctx, parentResourceID, syncOpts)
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 
@@ -46,7 +49,7 @@ func TestScheduleBuilderList(t *testing.T) {
 
 	s := NewScheduleBuilder(c)
 
-	res, _, _, err := s.List(ctx, parentResourceID, pToken)
+	res, _, err := s.List(ctx, parentResourceID, syncOpts)
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
 

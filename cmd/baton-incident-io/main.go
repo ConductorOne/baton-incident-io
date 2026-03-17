@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/conductorone/baton-incident-io/pkg/config"
 	"github.com/conductorone/baton-incident-io/pkg/connector"
@@ -11,9 +10,8 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 	"github.com/conductorone/baton-sdk/pkg/connectorrunner"
 	"github.com/conductorone/baton-sdk/pkg/field"
-	"github.com/conductorone/baton-sdk/pkg/types"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	"go.uber.org/zap"
+
+	"github.com/conductorone/baton-sdk/pkg/cli"
 )
 
 var version = "dev"
@@ -21,49 +19,31 @@ var version = "dev"
 func main() {
 	ctx := context.Background()
 
-	_, cmd, err := sdkconfig.DefineConfiguration(
+	sdkconfig.RunConnector(
 		ctx,
 		"baton-incident-io",
-		getConnector,
+		version,
 		config.Config,
-		connectorrunner.WithDefaultCapabilitiesConnectorBuilder(&connector.IncidentIo{}),
+		getConnector,
+		connectorrunner.WithDefaultCapabilitiesConnectorBuilderV2(&connector.IncidentIo{}),
 	)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-
-	cmd.Version = version
-
-	err = cmd.Execute()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
 }
 
-func getConnector(ctx context.Context, cfg *config.IncidentIo) (types.ConnectorServer, error) {
-	l := ctxzap.Extract(ctx)
-
+func getConnector(ctx context.Context, cfg *config.IncidentIo, opts *cli.ConnectorOpts) (connectorbuilder.ConnectorBuilderV2, []connectorbuilder.Opt, error) {
 	if err := field.Validate(config.Config, cfg); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	accessToken := cfg.GetString("token")
 
 	if accessToken == "" {
-		return nil, fmt.Errorf("missing access token")
+		return nil, nil, fmt.Errorf("missing access token")
 	}
 
 	cb, err := connector.New(ctx, accessToken)
 	if err != nil {
-		l.Error("error creating connector", zap.Error(err))
-		return nil, err
+		return nil, nil, err
 	}
-	connector, err := connectorbuilder.NewConnector(ctx, cb)
-	if err != nil {
-		l.Error("error creating connector", zap.Error(err))
-		return nil, err
-	}
-	return connector, nil
+
+	return cb, nil, nil
 }
