@@ -163,7 +163,7 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 				// Some users could be "On Call"
 				if _, exists := onCallUsers[user.ID]; !exists {
 					if seenUsers[user.ID] {
-						l.Warn("Duplicate user detected", zap.String("user_id", user.ID))
+						l.Debug("Duplicate user detected", zap.String("user_id", user.ID))
 						continue
 					}
 
