@@ -33,6 +33,7 @@ import (
 	"github.com/conductorone/baton-sdk/pkg/logging"
 	"github.com/conductorone/baton-sdk/pkg/session"
 	"github.com/conductorone/baton-sdk/pkg/types/sessions"
+	"github.com/conductorone/baton-sdk/pkg/uhttp"
 	"github.com/conductorone/baton-sdk/pkg/uotel"
 	utls2 "github.com/conductorone/baton-sdk/pkg/utls"
 )
@@ -178,6 +179,13 @@ func MakeMainCommand[T field.Configurable](
 			)
 			if v.GetBool("skip-full-sync") {
 				opts = append(opts, connectorrunner.WithFullSyncDisabled())
+			}
+			if v.GetBool("health-check") {
+				opts = append(opts, connectorrunner.WithHealthCheck(
+					true,
+					v.GetInt("health-check-port"),
+					v.GetString("health-check-bind-address"),
+				))
 			}
 		} else {
 			switch {
@@ -373,7 +381,18 @@ func MakeMainCommand[T field.Configurable](
 			opts = append(opts, connectorrunner.WithSkipGrants(v.GetBool("skip-grants")))
 		}
 
-		c, err := getconnector(runCtx, t, RunTimeOpts{})
+		httpTimeout := v.GetInt(field.HttpTimeoutField.GetName())
+		if httpTimeout <= 0 {
+			return fmt.Errorf("field %s: value must be greater than or equal to 1 but got %d", field.HttpTimeoutField.GetName(), httpTimeout)
+		}
+		httpTimeoutField := field.HttpTimeoutField
+		if _, err := field.ValidateField(&httpTimeoutField, httpTimeout); err != nil {
+			return err
+		}
+		runCtx = context.WithValue(runCtx, uhttp.ContextHTTPTimeoutKey, time.Duration(httpTimeout)*time.Second)
+
+		// Save the selected authentication method and get the connector.
+		c, err := getconnector(runCtx, t, RunTimeOpts{SelectedAuthMethod: v.GetString("auth-method")})
 		if err != nil {
 			return err
 		}
@@ -532,6 +551,16 @@ func MakeGRPCServerCommand[T field.Configurable](
 			runCtx = context.WithValue(runCtx, crypto.ContextClientSecretKey, secretJwk)
 		}
 
+		httpTimeout := v.GetInt(field.HttpTimeoutField.GetName())
+		if httpTimeout <= 0 {
+			return fmt.Errorf("field %s: value must be greater than or equal to 1 but got %d", field.HttpTimeoutField.GetName(), httpTimeout)
+		}
+		httpTimeoutField := field.HttpTimeoutField
+		if _, err := field.ValidateField(&httpTimeoutField, httpTimeout); err != nil {
+			return err
+		}
+		runCtx = context.WithValue(runCtx, uhttp.ContextHTTPTimeoutKey, time.Duration(httpTimeout)*time.Second)
+
 		sessionStoreMaximumSize := v.GetInt(field.ServerSessionStoreMaximumSizeField.GetName())
 		sessionConstructor := getGRPCSessionStoreClient(runCtx, serverCfg)
 		c, err := getconnector(runCtx, t, RunTimeOpts{
@@ -542,6 +571,7 @@ func MakeGRPCServerCommand[T field.Configurable](
 					otterOptions.MaximumWeight = uint64(sessionStoreMaximumSize)
 				}
 			}),
+			SelectedAuthMethod: v.GetString("auth-method"),
 		})
 		if err != nil {
 			return err
@@ -643,12 +673,13 @@ func MakeCapabilitiesCommand[T field.Configurable](
 			if err != nil {
 				return fmt.Errorf("failed to make configuration: %w", err)
 			}
+			authMethod := v.GetString("auth-method")
 			// validate required fields and relationship constraints
-			if err := field.Validate(confschema, t, field.WithAuthMethod(v.GetString("auth-method"))); err != nil {
+			if err := field.Validate(confschema, t, field.WithAuthMethod(authMethod)); err != nil {
 				return err
 			}
 
-			c, err = getconnector(runCtx, t, RunTimeOpts{})
+			c, err = getconnector(runCtx, t, RunTimeOpts{SelectedAuthMethod: authMethod})
 			if err != nil {
 				return err
 			}
