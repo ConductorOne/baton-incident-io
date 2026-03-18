@@ -100,7 +100,7 @@ func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Res
 func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Grant, *resource.SyncOpResults, error) {
 	l := ctxzap.Extract(ctx)
 
-	bag, pageToken, err := getToken(&opts.PageToken, userResourceType)
+	bag, pageToken, err := getToken(&opts.PageToken, scheduleResourceType)
 	if err != nil {
 		return nil, nil, err
 	}
