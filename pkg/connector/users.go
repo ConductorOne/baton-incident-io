@@ -6,8 +6,6 @@ import (
 
 	"github.com/conductorone/baton-incident-io/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -28,21 +26,21 @@ func (o *UserBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 }
 
 // List retrieves users and converts them into Baton resources.
-func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts resource.SyncOpAttrs) ([]*v2.Resource, *resource.SyncOpResults, error) {
 	l := ctxzap.Extract(ctx)
 
-	bag, pageToken, err := getToken(pToken, userResourceType)
+	bag, pageToken, err := getToken(&opts.PageToken, userResourceType)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	users, nextPageToken, _, err := o.client.ListUsers(ctx, client.PageOptions{
 		After:    pageToken,
-		PageSize: pToken.Size,
+		PageSize: opts.PageToken.Size,
 	})
 	if err != nil {
 		l.Error("Error fetching users", zap.Error(err))
-		return nil, "", nil, fmt.Errorf("error fetching users: %w", err)
+		return nil, nil, fmt.Errorf("error fetching users: %w", err)
 	}
 
 	var resources []*v2.Resource
@@ -66,7 +64,7 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 			resource.WithParentResourceID(parentResourceID),
 		)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating user resource: %w", err)
+			return nil, nil, fmt.Errorf("error creating user resource: %w", err)
 		}
 
 		resources = append(resources, userResource)
@@ -74,31 +72,31 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 
 	err = bag.Next(nextPageToken)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	nextPageToken, err = bag.Marshal()
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
-	return resources, nextPageToken, nil, nil
+	return resources, &resource.SyncOpResults{NextPageToken: nextPageToken}, nil
 }
 
 // Entitlements always returns an empty slice for users.
-func (o *UserBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (o *UserBuilder) Entitlements(_ context.Context, res *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Entitlement, *resource.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 // Role grants are implemented here for performance reasons.
-func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Grant, *resource.SyncOpResults, error) {
 	l := ctxzap.Extract(ctx)
 	userID := res.Id.Resource
 
 	user, err := o.client.GetUser(ctx, userID)
 	if err != nil {
 		l.Error("failed to fetch user for grant resolution", zap.String("user_id", userID), zap.Error(err))
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	var grants []*v2.Grant
@@ -141,7 +139,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, _ *paginatio
 		grants = append(grants, grant)
 	}
 
-	return grants, "", nil, nil
+	return grants, nil, nil
 }
 
 func NewUserBuilder(c *client.APIClient) *UserBuilder {

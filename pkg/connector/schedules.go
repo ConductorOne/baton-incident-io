@@ -6,8 +6,6 @@ import (
 
 	"github.com/conductorone/baton-incident-io/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
@@ -28,22 +26,22 @@ func (o *scheduleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 }
 
 // List retrieves a list of schedule resources.
-func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts resource.SyncOpAttrs) ([]*v2.Resource, *resource.SyncOpResults, error) {
 	l := ctxzap.Extract(ctx)
 
-	bag, pageToken, err := getToken(pToken, scheduleResourceType)
+	bag, pageToken, err := getToken(&opts.PageToken, scheduleResourceType)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	// Fetch schedules from the API
 	resp, nextPageToken, _, err := o.client.ListSchedules(ctx, client.PageOptions{
 		After:    pageToken,
-		PageSize: pToken.Size,
+		PageSize: opts.PageToken.Size,
 	})
 	if err != nil {
 		l.Error("Error fetching schedules", zap.Error(err))
-		return nil, "", nil, fmt.Errorf("error fetching schedules: %w", err)
+		return nil, nil, fmt.Errorf("error fetching schedules: %w", err)
 	}
 
 	var resources []*v2.Resource
@@ -59,7 +57,7 @@ func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 			resource.WithParentResourceID(parentResourceID),
 		)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating schedule resource: %w", err)
+			return nil, nil, fmt.Errorf("error creating schedule resource: %w", err)
 		}
 
 		resources = append(resources, scheduleResource)
@@ -67,19 +65,19 @@ func (o *scheduleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 
 	err = bag.Next(nextPageToken)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	nextPageToken, err = bag.Marshal()
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
-	return resources, nextPageToken, nil, nil
+	return resources, &resource.SyncOpResults{NextPageToken: nextPageToken}, nil
 }
 
 // Entitlements returns predefined roles associated with schedules.
-func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Entitlement, *resource.SyncOpResults, error) {
 	entitlementRoles := []string{
 		"On_Call",
 		"Member",
@@ -95,26 +93,26 @@ func (o *scheduleBuilder) Entitlements(ctx context.Context, teamResource *v2.Res
 		))
 	}
 
-	return entitlements, "", nil, nil
+	return entitlements, nil, nil
 }
 
 // Grants assigns {'on call','member'} to users based on their schedule participation.
-func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
+func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Grant, *resource.SyncOpResults, error) {
 	l := ctxzap.Extract(ctx)
 
-	bag, pageToken, err := getToken(pToken, userResourceType)
+	bag, pageToken, err := getToken(&opts.PageToken, scheduleResourceType)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	// Fetch schedules from the API
 	schedulesResp, nextPageToken, _, err := o.client.ListSchedules(ctx, client.PageOptions{
 		After:    pageToken,
-		PageSize: pToken.Size,
+		PageSize: opts.PageToken.Size,
 	})
 	if err != nil {
 		l.Error("Error fetching schedules", zap.Error(err))
-		return nil, "", nil, fmt.Errorf("error fetching schedules: %w", err)
+		return nil, nil, fmt.Errorf("error fetching schedules: %w", err)
 	}
 
 	var grants []*v2.Grant
@@ -188,15 +186,15 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 
 	err = bag.Next(nextPageToken)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	nextPageToken, err = bag.Marshal()
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
-	return grants, nextPageToken, nil, nil
+	return grants, &resource.SyncOpResults{NextPageToken: nextPageToken}, nil
 }
 
 // createGrant generates a grant for a user with the specified role.

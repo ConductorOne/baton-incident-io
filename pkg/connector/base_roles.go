@@ -6,8 +6,6 @@ import (
 
 	"github.com/conductorone/baton-incident-io/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
-	"github.com/conductorone/baton-sdk/pkg/annotations"
-	"github.com/conductorone/baton-sdk/pkg/pagination"
 	"github.com/conductorone/baton-sdk/pkg/types/entitlement"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
@@ -23,21 +21,21 @@ func (b *baseRoleBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
 	return baseRoleResourceType
 }
 
-func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, pToken *pagination.Token) ([]*v2.Resource, string, annotations.Annotations, error) {
+func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId, opts resource.SyncOpAttrs) ([]*v2.Resource, *resource.SyncOpResults, error) {
 	l := ctxzap.Extract(ctx)
 
-	bag, pageToken, err := getToken(pToken, baseRoleResourceType)
+	bag, pageToken, err := getToken(&opts.PageToken, baseRoleResourceType)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	users, nextPageToken, _, err := b.client.ListUsers(ctx, client.PageOptions{
 		After:    pageToken,
-		PageSize: pToken.Size,
+		PageSize: opts.PageToken.Size,
 	})
 	if err != nil {
 		l.Error("Error fetching users for base roles", zap.Error(err))
-		return nil, "", nil, fmt.Errorf("error fetching users for base roles: %w", err)
+		return nil, nil, fmt.Errorf("error fetching users for base roles: %w", err)
 	}
 
 	roleMap := make(map[string]client.Role)
@@ -63,40 +61,40 @@ func (b *baseRoleBuilder) List(ctx context.Context, parentResourceID *v2.Resourc
 			resource.WithDescription(baseRoleCopy.Description),
 		)
 		if err != nil {
-			return nil, "", nil, fmt.Errorf("error creating base role resource: %w", err)
+			return nil, nil, fmt.Errorf("error creating base role resource: %w", err)
 		}
 
 		resources = append(resources, roleResource)
 	}
 	err = bag.Next(nextPageToken)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
 	nextToken, err := bag.Marshal()
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
 
-	return resources, nextToken, nil, nil
+	return resources, &resource.SyncOpResults{NextPageToken: nextToken}, nil
 }
 
-func (b *baseRoleBuilder) Entitlements(_ context.Context, resource *v2.Resource, _ *pagination.Token) ([]*v2.Entitlement, string, annotations.Annotations, error) {
+func (b *baseRoleBuilder) Entitlements(_ context.Context, res *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Entitlement, *resource.SyncOpResults, error) {
 	var entitlements []*v2.Entitlement
 
-	opts := []entitlement.EntitlementOption{
+	entitlementOpts := []entitlement.EntitlementOption{
 		entitlement.WithGrantableTo(userResourceType),
-		entitlement.WithDescription(fmt.Sprintf("Base role: %s", resource.DisplayName)),
-		entitlement.WithDisplayName(fmt.Sprintf("Role: %s", resource.DisplayName)),
+		entitlement.WithDescription(fmt.Sprintf("Base role: %s", res.DisplayName)),
+		entitlement.WithDisplayName(fmt.Sprintf("Role: %s", res.DisplayName)),
 	}
 
-	entitlements = append(entitlements, entitlement.NewPermissionEntitlement(resource, "assigned", opts...))
-	return entitlements, "", nil, nil
+	entitlements = append(entitlements, entitlement.NewPermissionEntitlement(res, "assigned", entitlementOpts...))
+	return entitlements, nil, nil
 }
 
 // The logic for role grants is implemented in users.go for performance reasons.
-func (b *baseRoleBuilder) Grants(ctx context.Context, resource *v2.Resource, pToken *pagination.Token) ([]*v2.Grant, string, annotations.Annotations, error) {
-	return nil, "", nil, nil
+func (b *baseRoleBuilder) Grants(ctx context.Context, res *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Grant, *resource.SyncOpResults, error) {
+	return nil, nil, nil
 }
 
 func NewBaseRoleBuilder(c *client.APIClient) *baseRoleBuilder {
