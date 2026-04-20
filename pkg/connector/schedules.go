@@ -126,15 +126,11 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 			DisplayName: schedule.Name,
 		}
 
-		onCallUsers := make(map[string]bool)
-
 		// users "On Call"
 		for _, shift := range schedule.CurrentShifts {
 			if shift.User.ID == "" || shift.User.Email == "" || shift.User.ID == "NOBODY" {
 				continue
 			}
-
-			onCallUsers[shift.User.ID] = true
 
 			grant, err := createGrant(scheduleRes, client.User{
 				ID:    shift.User.ID,
@@ -151,34 +147,31 @@ func (o *scheduleBuilder) Grants(ctx context.Context, scheduleResource *v2.Resou
 		}
 
 		// users "Member"
-		seenUsers := make(map[string]bool) // Duplicateds
+		seenUsers := make(map[string]bool)
 		for _, rotation := range schedule.Config.Rotation {
 			for _, user := range rotation.Users {
 				if user.ID == "NOBODY" || user.ID == "" || user.Email == "" {
 					continue
 				}
 
-				// Some users could be "On Call"
-				if _, exists := onCallUsers[user.ID]; !exists {
-					if seenUsers[user.ID] {
-						l.Debug("Duplicate user detected", zap.String("user_id", user.ID))
-						continue
-					}
+				if seenUsers[user.ID] {
+					l.Debug("Duplicate user detected", zap.String("user_id", user.ID))
+					continue
+				}
 
-					seenUsers[user.ID] = true
+				seenUsers[user.ID] = true
 
-					grant, err := createGrant(scheduleRes, client.User{
-						ID:    user.ID,
-						Email: user.Email,
-					}, "Member")
-					if err != nil {
-						l.Error("Error creating grant", zap.Error(err))
-						continue
-					}
+				grant, err := createGrant(scheduleRes, client.User{
+					ID:    user.ID,
+					Email: user.Email,
+				}, "Member")
+				if err != nil {
+					l.Error("Error creating grant", zap.Error(err))
+					continue
+				}
 
-					if grant != nil {
-						grants = append(grants, grant)
-					}
+				if grant != nil {
+					grants = append(grants, grant)
 				}
 			}
 		}
