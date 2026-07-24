@@ -40,7 +40,7 @@ func getConnector(ctx context.Context, cfg *config.IncidentIo, opts *cli.Connect
 		return nil, nil, fmt.Errorf("missing access token")
 	}
 
-	cb, err := connector.New(ctx, accessToken)
+	cb, err := connector.New(ctx, accessToken, opts)
 	if err != nil {
 		return nil, nil, err
 	}
