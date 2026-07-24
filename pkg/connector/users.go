@@ -6,23 +6,27 @@ import (
 
 	"github.com/conductorone/baton-incident-io/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
+	"github.com/conductorone/baton-sdk/pkg/annotations"
 	"github.com/conductorone/baton-sdk/pkg/types/grant"
 	"github.com/conductorone/baton-sdk/pkg/types/resource"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 )
 
 const roleGrantPermission = "assigned"
 
 // userBuilder manages user-related resources.
 type UserBuilder struct {
-	resourceType *v2.ResourceType
-	client       *client.APIClient
+	resourceType    *v2.ResourceType
+	client          *client.APIClient
+	syncBaseRoles   bool
+	syncCustomRoles bool
 }
 
 // ResourceType returns the type of resource managed by this builder.
 func (o *UserBuilder) ResourceType(ctx context.Context) *v2.ResourceType {
-	return userResourceType
+	return o.resourceType
 }
 
 // List retrieves users and converts them into Baton resources.
@@ -102,7 +106,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resourc
 	var grants []*v2.Grant
 
 	// BaseRole
-	if user.BaseRole.ID != "" {
+	if o.syncBaseRoles && user.BaseRole.ID != "" {
 		baseRoleResource := &v2.Resource{
 			Id: &v2.ResourceId{
 				ResourceType: baseRoleResourceType.Id,
@@ -119,32 +123,49 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resourc
 	}
 
 	// CustomRoles
-	for _, cr := range user.CustomRoles {
-		if cr.ID == "" {
-			continue
-		}
+	if o.syncCustomRoles {
+		for _, cr := range user.CustomRoles {
+			if cr.ID == "" {
+				continue
+			}
 
-		customRoleResource := &v2.Resource{
-			Id: &v2.ResourceId{
-				ResourceType: customRoleResourceType.Id,
-				Resource:     cr.ID,
-			},
-		}
+			customRoleResource := &v2.Resource{
+				Id: &v2.ResourceId{
+					ResourceType: customRoleResourceType.Id,
+					Resource:     cr.ID,
+				},
+			}
 
-		grant := grant.NewGrant(
-			customRoleResource,
-			roleGrantPermission,
-			res,
-		)
-		grants = append(grants, grant)
+			grant := grant.NewGrant(
+				customRoleResource,
+				roleGrantPermission,
+				res,
+			)
+			grants = append(grants, grant)
+		}
 	}
 
 	return grants, nil, nil
 }
 
-func NewUserBuilder(c *client.APIClient) *UserBuilder {
+func NewUserBuilder(c *client.APIClient, syncBaseRoles, syncCustomRoles bool) *UserBuilder {
+	resourceType := proto.Clone(userResourceType).(*v2.ResourceType)
+	userAnnos := annotations.Annotations(resourceType.GetAnnotations())
+	if !syncBaseRoles && !syncCustomRoles {
+		// Neither cross-synced role type is enabled, so this builder will
+		// never emit a grant -- skip both passes entirely.
+		userAnnos.Update(&v2.SkipEntitlementsAndGrants{})
+	} else {
+		// Users have no entitlements of their own; only the grants pass is
+		// conditional on which role types are being synced.
+		userAnnos.Update(&v2.SkipEntitlements{})
+	}
+	resourceType.Annotations = userAnnos
+
 	return &UserBuilder{
-		resourceType: userResourceType,
-		client:       c,
+		resourceType:    resourceType,
+		client:          c,
+		syncBaseRoles:   syncBaseRoles,
+		syncCustomRoles: syncCustomRoles,
 	}
 }
