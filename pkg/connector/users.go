@@ -51,7 +51,6 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 		}
 
 		userTraits := []resource.UserTraitOption{
-			resource.WithUserProfile(profile),
 			resource.WithEmail(user.Email, true),
 		}
 
@@ -61,6 +60,7 @@ func (o *UserBuilder) List(ctx context.Context, parentResourceID *v2.ResourceId,
 			userResourceType,
 			user.ID,
 			userTraits,
+			resource.WithResourceProfile(profile),
 			resource.WithParentResourceID(parentResourceID),
 		)
 		if err != nil {
