@@ -18,10 +18,10 @@ const roleGrantPermission = "assigned"
 
 // userBuilder manages user-related resources.
 type UserBuilder struct {
-	resourceType    *v2.ResourceType
-	client          *client.APIClient
-	syncBaseRoles   bool
-	syncCustomRoles bool
+	resourceType               *v2.ResourceType
+	client                     *client.APIClient
+	skipBaseRoleResourceType   bool
+	skipCustomRoleResourceType bool
 }
 
 // ResourceType returns the type of resource managed by this builder.
@@ -106,7 +106,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resourc
 	var grants []*v2.Grant
 
 	// BaseRole
-	if o.syncBaseRoles && user.BaseRole.ID != "" {
+	if !o.skipBaseRoleResourceType && user.BaseRole.ID != "" {
 		baseRoleResource := &v2.Resource{
 			Id: &v2.ResourceId{
 				ResourceType: baseRoleResourceType.Id,
@@ -123,7 +123,7 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resourc
 	}
 
 	// CustomRoles
-	if o.syncCustomRoles {
+	if !o.skipCustomRoleResourceType {
 		for _, cr := range user.CustomRoles {
 			if cr.ID == "" {
 				continue
@@ -148,10 +148,10 @@ func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resourc
 	return grants, nil, nil
 }
 
-func NewUserBuilder(c *client.APIClient, syncBaseRoles, syncCustomRoles bool) *UserBuilder {
+func NewUserBuilder(c *client.APIClient, skipBaseRoleResourceType, skipCustomRoleResourceType bool) *UserBuilder {
 	resourceType := proto.Clone(userResourceType).(*v2.ResourceType)
 	userAnnos := annotations.Annotations(resourceType.GetAnnotations())
-	if !syncBaseRoles && !syncCustomRoles {
+	if skipBaseRoleResourceType && skipCustomRoleResourceType {
 		// Neither cross-synced role type is enabled, so this builder will
 		// never emit a grant -- skip both passes entirely.
 		userAnnos.Update(&v2.SkipEntitlementsAndGrants{})
@@ -163,9 +163,9 @@ func NewUserBuilder(c *client.APIClient, syncBaseRoles, syncCustomRoles bool) *U
 	resourceType.Annotations = userAnnos
 
 	return &UserBuilder{
-		resourceType:    resourceType,
-		client:          c,
-		syncBaseRoles:   syncBaseRoles,
-		syncCustomRoles: syncCustomRoles,
+		resourceType:               resourceType,
+		client:                     c,
+		skipBaseRoleResourceType:   skipBaseRoleResourceType,
+		skipCustomRoleResourceType: skipCustomRoleResourceType,
 	}
 }

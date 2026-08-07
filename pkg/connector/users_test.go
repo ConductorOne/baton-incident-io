@@ -134,7 +134,7 @@ func TestUserBuilder_Grants_RespectsSyncFilter(t *testing.T) {
 
 	t.Run("both role types synced emits both grants", func(t *testing.T) {
 		testClient := newSingleUserTestClient()
-		builder := NewUserBuilder(testClient, true, true)
+		builder := NewUserBuilder(testClient, false, false)
 
 		grants, _, err := builder.Grants(context.Background(), userResource, resource.SyncOpAttrs{})
 		if err != nil {
@@ -151,7 +151,7 @@ func TestUserBuilder_Grants_RespectsSyncFilter(t *testing.T) {
 
 	t.Run("neither role type synced emits no grants", func(t *testing.T) {
 		testClient := newSingleUserTestClient()
-		builder := NewUserBuilder(testClient, false, false)
+		builder := NewUserBuilder(testClient, true, true)
 
 		grants, _, err := builder.Grants(context.Background(), userResource, resource.SyncOpAttrs{})
 		if err != nil {
@@ -165,7 +165,7 @@ func TestUserBuilder_Grants_RespectsSyncFilter(t *testing.T) {
 
 	t.Run("only base role synced emits only base-role grant", func(t *testing.T) {
 		testClient := newSingleUserTestClient()
-		builder := NewUserBuilder(testClient, true, false)
+		builder := NewUserBuilder(testClient, false, true)
 
 		grants, _, err := builder.Grants(context.Background(), userResource, resource.SyncOpAttrs{})
 		if err != nil {

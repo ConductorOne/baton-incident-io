@@ -12,15 +12,15 @@ import (
 )
 
 type IncidentIo struct {
-	apiClient       *client.APIClient
-	syncBaseRoles   bool
-	syncCustomRoles bool
+	apiClient                  *client.APIClient
+	skipBaseRoleResourceType   bool
+	skipCustomRoleResourceType bool
 }
 
 // ResourceSyncers returns a ResourceSyncerV2 for each resource type that should be synced from the upstream service.
 func (d *IncidentIo) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
 	return []connectorbuilder.ResourceSyncerV2{
-		NewUserBuilder(d.apiClient, d.syncBaseRoles, d.syncCustomRoles),
+		NewUserBuilder(d.apiClient, d.skipBaseRoleResourceType, d.skipCustomRoleResourceType),
 		NewScheduleBuilder(d.apiClient),
 		NewBaseRoleBuilder(d.apiClient),
 		NewCustomRoleBuilder(d.apiClient),
@@ -51,12 +51,13 @@ func (d *IncidentIo) Validate(ctx context.Context) (annotations.Annotations, err
 func New(ctx context.Context, accessToken string, opts *cli.ConnectorOpts) (*IncidentIo, error) {
 	apiClient := client.NewClient(accessToken, nil)
 
-	syncBaseRoles := opts.WillSyncResourceType(BaseRoleResourceTypeID)
-	syncCustomRoles := opts.WillSyncResourceType(CustomRoleResourceTypeID)
+	// nil opts means no filter, so nothing is skipped.
+	skipBaseRoleResourceType := opts != nil && !opts.WillSyncResourceType(BaseRoleResourceTypeID)
+	skipCustomRoleResourceType := opts != nil && !opts.WillSyncResourceType(CustomRoleResourceTypeID)
 
 	return &IncidentIo{
-		apiClient:       apiClient,
-		syncBaseRoles:   syncBaseRoles,
-		syncCustomRoles: syncCustomRoles,
+		apiClient:                  apiClient,
+		skipBaseRoleResourceType:   skipBaseRoleResourceType,
+		skipCustomRoleResourceType: skipCustomRoleResourceType,
 	}, nil
 }
