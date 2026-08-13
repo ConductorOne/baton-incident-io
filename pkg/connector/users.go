@@ -94,6 +94,14 @@ func (o *UserBuilder) Entitlements(_ context.Context, res *v2.Resource, opts res
 
 // Role grants are implemented here for performance reasons.
 func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Grant, *resource.SyncOpResults, error) {
+	if o.skipBaseRoleResourceType && o.skipCustomRoleResourceType {
+		// Every grant target is excluded from the sync, so skip the per-user
+		// fetch entirely rather than discarding its result below. The
+		// SkipEntitlementsAndGrants annotation normally stops the SDK before
+		// it reaches here; this keeps the guard self-contained.
+		return nil, nil, nil
+	}
+
 	l := ctxzap.Extract(ctx)
 	userID := res.Id.Resource
 
