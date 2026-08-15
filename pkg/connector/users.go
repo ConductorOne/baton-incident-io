@@ -93,15 +93,13 @@ func (o *UserBuilder) Entitlements(_ context.Context, res *v2.Resource, opts res
 }
 
 // Role grants are implemented here for performance reasons.
+//
+// The cross-type emission is gated per role type below, but there is no
+// combined early return: when both role types are excluded, NewUserBuilder
+// annotates this resource type SkipEntitlementsAndGrants and the SDK never
+// calls Grants() at all (see shouldSkipEntitlementsAndGrants in the SDK's
+// pkg/sync/syncer.go), so guarding again here would be unreachable.
 func (o *UserBuilder) Grants(ctx context.Context, res *v2.Resource, opts resource.SyncOpAttrs) ([]*v2.Grant, *resource.SyncOpResults, error) {
-	if o.skipBaseRoleResourceType && o.skipCustomRoleResourceType {
-		// Every grant target is excluded from the sync, so skip the per-user
-		// fetch entirely rather than discarding its result below. The
-		// SkipEntitlementsAndGrants annotation normally stops the SDK before
-		// it reaches here; this keeps the guard self-contained.
-		return nil, nil, nil
-	}
-
 	l := ctxzap.Extract(ctx)
 	userID := res.Id.Resource
 

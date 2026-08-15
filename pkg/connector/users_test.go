@@ -2,7 +2,6 @@ package connector
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net/http"
 	"reflect"
@@ -159,22 +158,6 @@ func TestUserBuilder_Grants_RespectsSyncFilter(t *testing.T) {
 		grants, _, err := builder.Grants(context.Background(), userResource, resource.SyncOpAttrs{})
 		if err != nil {
 			t.Fatalf("Expected no error, got %v", err)
-		}
-
-		if len(grants) != 0 {
-			t.Errorf("Expected zero grants, got %+v", grants)
-		}
-	})
-
-	t.Run("neither role type synced skips the user fetch", func(t *testing.T) {
-		// A transport that always errors: if Grants still succeeds, it never
-		// issued the per-user request whose result it would have discarded.
-		testClient := test.NewTestClient(nil, errors.New("unexpected API call"))
-		builder := NewUserBuilder(testClient, true, true)
-
-		grants, _, err := builder.Grants(context.Background(), userResource, resource.SyncOpAttrs{})
-		if err != nil {
-			t.Fatalf("Expected no API call, got error %v", err)
 		}
 
 		if len(grants) != 0 {
