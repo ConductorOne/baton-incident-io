@@ -35,7 +35,7 @@ func initClient(t *testing.T) *client.APIClient {
 func TestUserBuilderList(t *testing.T) {
 	c := initClient(t)
 
-	u := NewUserBuilder(c)
+	u := NewUserBuilder(c, false, false)
 
 	res, _, err := u.List(ctx, parentResourceID, syncOpts)
 	assert.Nil(t, err)

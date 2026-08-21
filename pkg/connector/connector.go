@@ -7,17 +7,20 @@ import (
 	"github.com/conductorone/baton-incident-io/pkg/client"
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 	"github.com/conductorone/baton-sdk/pkg/annotations"
+	"github.com/conductorone/baton-sdk/pkg/cli"
 	"github.com/conductorone/baton-sdk/pkg/connectorbuilder"
 )
 
 type IncidentIo struct {
-	apiClient *client.APIClient
+	apiClient                  *client.APIClient
+	skipBaseRoleResourceType   bool
+	skipCustomRoleResourceType bool
 }
 
 // ResourceSyncers returns a ResourceSyncerV2 for each resource type that should be synced from the upstream service.
 func (d *IncidentIo) ResourceSyncers(ctx context.Context) []connectorbuilder.ResourceSyncerV2 {
 	return []connectorbuilder.ResourceSyncerV2{
-		NewUserBuilder(d.apiClient),
+		NewUserBuilder(d.apiClient, d.skipBaseRoleResourceType, d.skipCustomRoleResourceType),
 		NewScheduleBuilder(d.apiClient),
 		NewBaseRoleBuilder(d.apiClient),
 		NewCustomRoleBuilder(d.apiClient),
@@ -45,8 +48,16 @@ func (d *IncidentIo) Validate(ctx context.Context) (annotations.Annotations, err
 }
 
 // New returns a new instance of the connector.
-func New(ctx context.Context, accessToken string) (*IncidentIo, error) {
+func New(ctx context.Context, accessToken string, opts *cli.ConnectorOpts) (*IncidentIo, error) {
 	apiClient := client.NewClient(accessToken, nil)
 
-	return &IncidentIo{apiClient: apiClient}, nil
+	// nil opts means no filter, so nothing is skipped.
+	skipBaseRoleResourceType := opts != nil && !opts.WillSyncResourceType(BaseRoleResourceTypeID)
+	skipCustomRoleResourceType := opts != nil && !opts.WillSyncResourceType(CustomRoleResourceTypeID)
+
+	return &IncidentIo{
+		apiClient:                  apiClient,
+		skipBaseRoleResourceType:   skipBaseRoleResourceType,
+		skipCustomRoleResourceType: skipCustomRoleResourceType,
+	}, nil
 }

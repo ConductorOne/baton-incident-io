@@ -4,6 +4,11 @@ import (
 	v2 "github.com/conductorone/baton-sdk/pb/c1/connector/v2"
 )
 
+const (
+	BaseRoleResourceTypeID   = "base-role"
+	CustomRoleResourceTypeID = "custom-role"
+)
+
 var userResourceType = &v2.ResourceType{
 	Id:          "user",
 	DisplayName: "User",
@@ -11,12 +16,12 @@ var userResourceType = &v2.ResourceType{
 }
 
 var baseRoleResourceType = &v2.ResourceType{
-	Id:          "base-role",
+	Id:          BaseRoleResourceTypeID,
 	DisplayName: "base Role",
 }
 
 var customRoleResourceType = &v2.ResourceType{
-	Id:          "custom-role",
+	Id:          CustomRoleResourceTypeID,
 	DisplayName: "custom Role",
 }
 
