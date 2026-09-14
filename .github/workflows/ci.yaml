@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BATON_LOG_LEVEL: debug
-      API_TOKEN: ${{ secrets.API_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
