@@ -28,7 +28,7 @@ jobs:
         run: ./baton-incident-io --token="${{ secrets.API_TOKEN }}"
 
       - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
+        uses: ConductorOne/github-workflows/actions/get-baton@v4
 
       - name: Run capabilities
         run: ./baton-incident-io capabilities
