@@ -10,11 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BATON_LOG_LEVEL: debug
-      CONNECTOR_GRANT: 'grant:entitlement:group:1234:member:user:9876'
-      CONNECTOR_ENTITLEMENT: 'entitlement:group:1234:member'
-      CONNECTOR_PRINCIPAL: 'user:9876'
-      CONNECTOR_PRINCIPAL_TYPE: 'user'
-      API_TOKEN: ${{ secrets.API_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,9 +21,6 @@ jobs:
         run: go build ./cmd/baton-incident-io
       - name: Run baton-incident-io
         run: ./baton-incident-io --token="${{ secrets.API_TOKEN }}"
-
-      - name: Install baton
-        run: ./scripts/get-baton.sh && mv baton /usr/local/bin
 
       - name: Run capabilities
         run: ./baton-incident-io capabilities
