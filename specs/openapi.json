@@ -1,0 +1,390 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "incident.io API (baton-incident-io surface)",
+    "version": "2026-09-22",
+    "description": "The subset of the incident.io v2 API that baton-incident-io calls. Scope is connector scope: three operations, and only the response fields the connector's structs declare. Narrowed from the vendor's published document at https://api.incident.io/v1/openapiV3.json (accessed 2026-09-22); required flags and types are taken from there, not inferred from the Go structs."
+  },
+  "servers": [
+    {
+      "url": "https://api.incident.io"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v2/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List users",
+        "description": "Called by pkg/client/client.go ListUsers. Paginated: the connector sends `after` from the previous response's `pagination_meta.after` and terminates when that field is absent. The vendor spec marks `pagination_meta` required on this response, which is what lets the connector treat a missing block as an error rather than the end of the list.",
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Page size. The connector sends 100 when its configured size is 0 (pkg/client/helper.go ItemsPerPage).",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from the previous response's pagination_meta.after. Omitted on the first page.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of users.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersListResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v2/users/{id}": {
+      "get": {
+        "operationId": "showUser",
+        "summary": "Show a single user",
+        "description": "Called by pkg/client/client.go GetUser. Not paginated.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "user"
+                  ],
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v2/schedules": {
+      "get": {
+        "operationId": "listSchedules",
+        "summary": "List schedules",
+        "description": "Called by pkg/client/client.go ListSchedules. Paginated the same way as /v2/users. Note the vendor spec does NOT mark `pagination_meta` required on this response, unlike the users list, so the connector does not enforce its presence here.",
+        "parameters": [
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "description": "Page size. The connector sends 100 when its configured size is 0.",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "description": "Cursor from the previous response's pagination_meta.after.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of schedules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulesListResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key from the incident.io dashboard (Settings > API keys). Sent by uhttp.WithBearerToken."
+      }
+    },
+    "schemas": {
+      "UsersListResult": {
+        "type": "object",
+        "required": [
+          "users",
+          "pagination_meta"
+        ],
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "pagination_meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "SchedulesListResult": {
+        "type": "object",
+        "required": [
+          "schedules"
+        ],
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Schedule"
+            }
+          },
+          "pagination_meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        }
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "required": [
+          "page_size"
+        ],
+        "description": "Present on every list response. `after` is omitted once there are no further pages -- the recorded fixture pkg/test/mockResponses/usersMock.json is exactly {\"page_size\": 25}.",
+        "properties": {
+          "page_size": {
+            "type": "integer",
+            "description": "The maximum number of results requested."
+          },
+          "after": {
+            "type": "string",
+            "description": "If provided, pass this as the `after` param to load the next page. Absent on the last page."
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "description": "Only the fields baton-incident-io reads. The vendor also returns is_active, role, seats and slack_user_id, which the connector does not decode.",
+        "required": [
+          "id",
+          "name",
+          "base_role",
+          "custom_roles"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "description": "Optional per the vendor spec."
+          },
+          "base_role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "custom_roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            }
+          }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "description": "RBAC role. base_role.id and custom_roles[].id are the resource IDs for the base-role and custom-role resource types.",
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "Only the fields baton-incident-io reads.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "current_shifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CurrentShift"
+            }
+          },
+          "config": {
+            "$ref": "#/components/schemas/ScheduleConfig"
+          }
+        }
+      },
+      "ScheduleConfig": {
+        "type": "object",
+        "required": [
+          "rotations"
+        ],
+        "properties": {
+          "rotations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Rotation"
+            }
+          }
+        }
+      },
+      "Rotation": {
+        "type": "object",
+        "description": "Only the fields baton-incident-io reads. The vendor also returns layers, handovers and working_intervals.",
+        "required": [
+          "id",
+          "name",
+          "users"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftUser"
+            }
+          }
+        }
+      },
+      "CurrentShift": {
+        "type": "object",
+        "required": [
+          "start_at",
+          "end_at"
+        ],
+        "properties": {
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "rotation_id": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ShiftUser"
+          }
+        }
+      },
+      "ShiftUser": {
+        "type": "object",
+        "description": "The vendor's UserV2, narrowed to the fields the connector reads.",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Error. The connector does not decode error bodies: uhttp classifies by status code, and 429 drives the rate-limit annotation. The vendor documents a shared ErrorResponse shape for these, but no connector struct reads it, so no schema is modelled here."
+      }
+    }
+  }
+}

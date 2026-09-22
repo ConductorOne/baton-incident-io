@@ -76,12 +76,13 @@ func (c *APIClient) ListUsers(ctx context.Context, options PageOptions) ([]User,
 		return nil, "", nil, err
 	}
 
+	// WithPaginationData already failed the request if pagination_meta was missing.
 	return res.Users, res.Meta.After, annotation, nil
 }
 
 // getResourcesFromAPI makes a GET request to the specified API endpoint.
 func (c *APIClient) getResourcesFromAPI(ctx context.Context, urlAddress string, res any, reqOptions ...ReqOpt) (annotations.Annotations, error) {
-	_, annotation, err := c.doRequest(ctx, http.MethodGet, urlAddress, &res, reqOptions...)
+	_, annotation, err := c.doRequest(ctx, http.MethodGet, urlAddress, res, reqOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +121,11 @@ func (c *APIClient) doRequest(ctx context.Context, method, endpointUrl string, r
 
 	if res != nil {
 		doOptions = append(doOptions, uhttp.WithJSONResponse(res))
+	}
+	// A response type that reports its own pagination data is additionally checked for it,
+	// so a page arriving without a cursor fails here instead of silently ending the sync.
+	if paginated, ok := res.(uhttp.PaginatedResponse); ok {
+		doOptions = append(doOptions, uhttp.WithPaginationData(paginated))
 	}
 
 	response, err := c.wrapper.Do(request, doOptions...)

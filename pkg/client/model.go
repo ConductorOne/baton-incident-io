@@ -2,7 +2,15 @@ package client
 
 type UserResponse struct {
 	Users []User `json:"users"`
-	Meta  Meta   `json:"pagination_meta"`
+	Meta  *Meta  `json:"pagination_meta"`
+}
+
+// HasPaginationData satisfies uhttp.PaginatedResponse. incident.io's published spec marks
+// pagination_meta as required on UsersListResultV2 and leaves after optional inside it, so
+// the object is always sent and only the cursor drops out on the last page. A nil Meta
+// means the block went missing - and ListUsers reads Meta.After without a guard.
+func (r *UserResponse) HasPaginationData() bool {
+	return r.Meta != nil
 }
 
 type ScheduleResponse struct {
