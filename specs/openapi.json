@@ -1,0 +1,470 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "incident.io API V2 (baton-incident-io connector surface)",
+    "version": "1.0.0",
+    "description": "Describes only the endpoints baton-incident-io calls. Scope is derived from pkg/client/client.go; response shapes are derived from the structs in pkg/client/model.go and settled against incident.io's published OpenAPI 3.0 document at https://api.incident.io/v1/openapiV3.json (accessed 2026-09-29), which covers the V2 endpoints despite the v1 path.\n\nOnly the properties the connector's structs declare are modelled. incident.io's document describes many more per resource -- UserWithRolesV2 alone adds is_active, seats, slack_user_id and the deprecated role field, and ScheduleV2 adds timezone, team_ids, permalink, created_at, updated_at, annotations, next_shifts and holidays_public_config. The omissions are deliberate -- spec scope is connector scope.\n\nPaths are written relative to the connector's own base, which is the constant baseDomain = \"https://api.incident.io/v2\" in pkg/client/client.go, with segments appended by url.JoinPath. incident.io's own document instead uses https://api.incident.io as the server and spells these paths /v2/users, /v2/users/{id} and /v2/schedules; the two are equivalent.\n\nAuth: an incident.io API key sent as `Authorization: Bearer` by uhttp.WithBearerToken. The connector sets Content-Type and Accept to application/json on every request, including the GETs.\n\nPagination: cursor-based. The connector sends `page_size` (its own default of 100 when the caller passes 0) and `after`, then replays `pagination_meta.after` from the response as the next `after`. `after` is omitted entirely when empty, so the first request carries only `page_size`. An empty `after` in the response ends the sync."
+  },
+  "servers": [
+    {
+      "url": "https://api.incident.io/v2",
+      "description": "Hardcoded as baseDomain in pkg/client/client.go. The connector exposes no override for it."
+    }
+  ],
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Users",
+      "description": "incident.io users and the RBAC roles attached to them."
+    },
+    {
+      "name": "Schedules",
+      "description": "On-call schedules, their rotations, and their current shifts."
+    }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "operationId": "listUsers",
+        "summary": "List users",
+        "description": "Called by pkg/client/client.go ListUsers. Backs three syncers at once: the user syncer builds one user resource per record, and the base-role and custom-role syncers derive their entire resource sets from the roles embedded in these records -- incident.io exposes no standalone roles endpoint, so pkg/connector/base_roles.go and custom_roles.go deduplicate roles by id across the user list.\n\nThe connector sends neither the `email`, `slack_user_id`, nor `include_inactive` filters that incident.io supports, so deactivated users are excluded by the API default. Those parameters are omitted here because spec scope is connector scope.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "$ref": "#/components/parameters/after"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of users, each with its roles inlined.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersListResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "getUser",
+        "summary": "Show a user",
+        "description": "Called by pkg/client/client.go GetUser from the user syncer's Grants, to read one user's base role and custom roles and emit the corresponding role grants. Note the envelope differs from the list endpoint: a single `user` object, not a `users` array, and no pagination_meta.",
+        "tags": [
+          "Users"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique identifier of the user. The connector uses this value as the Baton user resource id and appends it with url.JoinPath.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "01FCNDV6P870EA6S7TK1DSYDG0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The requested user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserShowResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/schedules": {
+      "get": {
+        "operationId": "listSchedules",
+        "summary": "List schedules",
+        "description": "Called by pkg/client/client.go ListSchedules. The schedule syncer emits one resource per schedule, then reads two things off each record: `current_shifts` for who is on call right now, and `config.rotations[].users` for who is in each rotation.\n\nincident.io documents that `next_shifts` is only populated when page_size is 25 or lower. That does not affect this connector, which requests 100 by default and never reads `next_shifts`.",
+        "tags": [
+          "Schedules"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/pageSize"
+          },
+          {
+            "$ref": "#/components/parameters/after"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of schedules.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulesListResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "incident.io API key, sent by uhttp.WithBearerToken."
+      }
+    },
+    "parameters": {
+      "pageSize": {
+        "name": "page_size",
+        "in": "query",
+        "required": false,
+        "description": "Number of records to return. The connector always sends it, substituting client.ItemsPerPage (100) whenever the caller passes 0. incident.io's own default is 25 and its maximum is 10000.",
+        "schema": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 25
+        },
+        "example": 100
+      },
+      "after": {
+        "name": "after",
+        "in": "query",
+        "required": false,
+        "description": "Cursor: the id of the last record from the previous page. The connector replays `pagination_meta.after` here, and WithQueryParam drops the parameter entirely when the value is empty -- so the first request of a sync carries no `after` at all.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "01FDAG4SAP5TYPT98WGR2N7W91"
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "incident.io error response. The connector does not decode this body -- uhttp surfaces the status, and the connector does not branch on the payload.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "UsersListResult": {
+        "type": "object",
+        "description": "Envelope for GET /users, decoded into client.UserResponse. Modelled as written: the connector reads the array off `users` and the cursor off `pagination_meta`.",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "pagination_meta": {
+            "$ref": "#/components/schemas/PaginationMeta"
+          }
+        },
+        "required": [
+          "users",
+          "pagination_meta"
+        ]
+      },
+      "UserShowResult": {
+        "type": "object",
+        "description": "Envelope for GET /users/{id}, decoded into client.SingleUserResponse.",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "SchedulesListResult": {
+        "type": "object",
+        "description": "Envelope for GET /schedules, decoded into client.ScheduleResponse.",
+        "properties": {
+          "schedules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Schedule"
+            }
+          },
+          "pagination_meta": {
+            "$ref": "#/components/schemas/PaginationMetaWithTotal"
+          }
+        },
+        "required": [
+          "schedules"
+        ]
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "description": "Cursor envelope, decoded into client.Meta. Only these two fields are declared by the connector.",
+        "properties": {
+          "page_size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The maximum number of results that was requested. Decoded but not read."
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page. The connector returns this as its page token; an absent or empty value terminates the sync."
+          }
+        },
+        "required": [
+          "page_size"
+        ]
+      },
+      "PaginationMetaWithTotal": {
+        "type": "object",
+        "description": "The schedules endpoint returns incident.io's PaginationMetaResultWithTotalV2, which adds total_record_count. The connector decodes it into the same client.Meta struct, so total_record_count is discarded; it is documented here but not modelled as read.",
+        "properties": {
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "after": {
+            "type": "string",
+            "description": "Cursor for the next page."
+          },
+          "total_record_count": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Present in the vendor response; not declared by the connector's struct."
+          }
+        },
+        "required": [
+          "page_size"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "description": "incident.io's UserWithRolesV2, limited to the properties pkg/client/model.go declares. Both /users and /users/{id} return this shape.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the user. Used as the Baton user resource id.",
+            "example": "01FCNDV6P870EA6S7TK1DSYDG0"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the user. Used as the resource display name."
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address of the user. Not marked required -- incident.io's document lists only id, name, role, base_role, custom_roles, seats and is_active as required, so a user without an email is possible."
+          },
+          "base_role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ],
+            "description": "The user's single base RBAC role. The connector treats an empty `base_role.id` as 'no base role' and skips both the resource and the grant in that case."
+          },
+          "custom_roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "description": "Additional RBAC roles. Carries omitempty in the struct, so an absent array is expected and handled."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "base_role",
+          "custom_roles"
+        ]
+      },
+      "Role": {
+        "type": "object",
+        "description": "incident.io's RBACRoleV2. The connector uses this same struct for both base and custom roles, and builds role resources out of it -- there is no roles endpoint to enumerate them from.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the RBAC role. Used as the Baton role resource id and as the deduplication key across users."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the RBAC role."
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the purpose for the RBAC role. Optional in incident.io's document."
+          },
+          "slug": {
+            "type": "string",
+            "description": "Unique human-readable slug for the RBAC role."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "incident.io's ScheduleV2, limited to the properties pkg/client/model.go declares.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique internal ID of the schedule. Used as the Baton schedule resource id."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human readable name synced from the external provider."
+          },
+          "current_shifts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleEntry"
+            },
+            "description": "Shifts that are ongoing for this schedule. Read by pkg/connector/schedules.go to emit on-call grants."
+          },
+          "config": {
+            "$ref": "#/components/schemas/ScheduleConfig"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "ScheduleConfig": {
+        "type": "object",
+        "description": "Decoded into client.ScheduleConfig. Note the Go field is named Rotation (singular) but the JSON key is `rotations`.",
+        "properties": {
+          "rotations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Rotation"
+            },
+            "description": "Rotas in this schedule."
+          }
+        },
+        "required": [
+          "rotations"
+        ]
+      },
+      "Rotation": {
+        "type": "object",
+        "description": "incident.io's ScheduleRotationV2, limited to the three properties the connector declares. The vendor shape also carries layers, handovers, handover_start_at, working_intervals, scheduling_mode and effective_from, none of which the connector reads.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique internal ID of the rotation."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human readable name synced from the external provider."
+          },
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShiftUser"
+            },
+            "description": "The people in the rotation, in the order they take shifts. Read by pkg/connector/schedules.go to emit rotation membership grants."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "users"
+        ]
+      },
+      "ScheduleEntry": {
+        "type": "object",
+        "description": "incident.io's ScheduleEntryV2, limited to the four properties the connector declares. The vendor shape also carries entry_id, fingerprint and layer_id.",
+        "properties": {
+          "rotation_id": {
+            "type": "string",
+            "description": "If present, the rotation this entry applies to on the schedule. Optional in incident.io's document."
+          },
+          "user": {
+            "$ref": "#/components/schemas/ShiftUser"
+          },
+          "start_at": {
+            "type": "string",
+            "description": "Shift start. incident.io documents this as a date-time; the connector decodes it into a plain Go string and never parses it, so no format is asserted on the connector's side.",
+            "example": "2021-08-17T13:28:57.801578Z"
+          },
+          "end_at": {
+            "type": "string",
+            "description": "Shift end. Same treatment as start_at.",
+            "example": "2021-08-17T13:28:57.801578Z"
+          }
+        },
+        "required": [
+          "start_at",
+          "end_at"
+        ]
+      },
+      "ShiftUser": {
+        "type": "object",
+        "description": "incident.io's UserV2 as embedded in shifts and rotations, limited to the three properties the connector declares. Unlike the top-level User, this shape carries no roles -- the connector pairs `id` with the user resource type to build the grant.",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      }
+    }
+  }
+}
